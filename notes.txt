@@ -35,11 +35,8 @@ eritrean music
 spotify://playlist/0mJY721kZtX62bIkxJIsOf?si=21382e2a858d4397
 spotify://search/jazz%20and%20soul/playlists
 
-'4003 Paige View Road, Randallstown, MD, 21133'
-0mJY721kZtX62bIkxJIsOf
-
 Uber:
-uber://?action=setPickup&pickup=my_location&dropoff%5Bformatted_address%5D=Uber%20HQ%2C%20Market%20Street%2C%20San%20Francisco%2C%20CA%2C%20USA&dropoff%5Blatitude%5D=37.775231&dropoff%5Blongitude%5D=-122.417528 
+uber://?action=setPickup&pickup=my_location&dropoff%5Bformatted_address%5D=Uber%20HQ%2C%20Market%20Street%2C%20San%20Francisco%2C%20CA%2C%20USA&dropoff%5Blatitude%5D=37.775231&dropoff%5Blongitude%5D=-122.417528
 
 
 Reminder apps::
@@ -48,8 +45,16 @@ https://play.google.com/store/apps/details?id=in.smsoft.justremind
 https://play.google.com/store/apps/details?id=com.arthurivanets.reminder
 https://play.google.com/store/apps/details?id=com.todoist
 
+Voicemail:
+basic: com.vna.service.vvm
+tmobile: com.tmobile.vvm.application
+sprint: com.sprint.vvm
+at&t: com.att.mobile.android.vvm
+verizon: ??
 
-Readme::
+Issue::
 
-GreyPhone 
+Warning: Can't perform a React state update on an unmounted component. This is a no-op, but it indicates a memory leak in your application. To fix, cancel all subscriptions and asynchronous tasks in a useEffect cleanup function.
+    in ContactPanel (at SceneView.tsx:132)
+
 

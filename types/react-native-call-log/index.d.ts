@@ -1,8 +1,8 @@
 declare namespace CallLogs {
   export interface CallFilter {
-    minTimestamp: number;
-    maxTimestamp: number;
-    phoneNumbers: string;
+    minTimestamp?: number;
+    maxTimestamp?: number;
+    phoneNumbers?: string;
   }
 
   export interface CallLog {
@@ -15,7 +15,7 @@ declare namespace CallLogs {
     rawType: number;
   }
 
-  const load: (limit: number, filter: CallFilter) => Promise<CallLog[]>;
+  const load: (limit: number, filter?: CallFilter) => Promise<CallLog[]>;
 
   const loadAll: () => Promise<CallLog[]>;
 }

@@ -9,41 +9,52 @@ import {
   Alert,
   Button,
   FlatList,
-  KeyboardAvoidingView,
   Linking,
-  // Modal,
+  LogBox,
   PermissionsAndroid,
   Text,
   TextInput,
-  TouchableOpacity,
+  TouchableNativeFeedback,
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {TailwindProvider, useTailwind} from 'tailwind-rn';
 import utilities from './tailwind.json';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import Contacts from 'react-native-contacts';
 import {NavigationContainer} from '@react-navigation/native';
 import {
   createNativeStackNavigator,
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
+import {createMaterialTopTabNavigator} from '@react-navigation/material-top-tabs';
 import SendIntentAndroid from 'react-native-send-intent';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import Contacts from 'react-native-contacts';
 import CallDetectorManager from 'react-native-call-detection';
+import CallLogs from 'react-native-call-log'
 import RNImmediatePhoneCall from 'react-native-immediate-phone-call';
 import Torch from 'react-native-torch';
 import {useForm, Controller} from 'react-hook-form';
-// import {createStore} from 'state-pool';
 import SmsAndroid from 'react-native-sms-android';
 import {selectContactPhone} from 'react-native-select-contact';
 import BatteryMonitor from 'react-native-battery-monitor';
-import CallLogs from 'react-native-call-log'
+import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scrollview'
+
+LogBox.ignoreLogs(['new NativeEventEmitter']);
+LogBox.ignoreAllLogs();
 
 const PLAY_STORE_URL = 'market://launch?id=';
 const UBER_URL_ROOT =
   'uber://?action=setPickup&pickup=my_location&dropoff%5Bformatted_address%5D=';
 const LAUNCHER = 'shubh.ruthless'; // 'com.google.android.apps.nexuslauncher'
 const SETTINGS = 'com.android.settings';
+const MAGNIFIER = 'com.app2u.magnifier';
+const VOICEMAILS = [
+  'com.google.android.dialer',
+  'com.tmobile.vvm.application',
+  'com.sprint.vvm',
+  'com.att.mobile.android.vvm',
+  'com.vna.service.vvm',
+];
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat'];
 const MONTHS = [
@@ -60,43 +71,37 @@ const MONTHS = [
   'Nov',
   'Dec',
 ];
-
 const BATTERY_LEVELS = [0.2, 0.1, 0.05, 0.03, 0.02, 0.01];
-
-// const globalStore = createStore(); // Synchronize global state
-// globalStore.setState('modalVisible', false);
-// globalStore.setState('modalText', '');
 
 export enum Screen {
   Home = 'Home',
   Extras = 'Extras',
   ContactList = 'ContactList',
   Configure = 'Configure',
+  HomeTab = 'HomeTab',
 }
-
-type RootStackParamList = {
+type StackParamList = {
   Home: {apps: App[]};
   Extras: {apps: App[]};
   ContactList: {app: App};
-  Configure: undefined;
+  Configure: {defaults: AppData};
+  HomeTab: undefined;
 };
 
-const RootStack = createNativeStackNavigator<RootStackParamList>();
-type HomeProps = NativeStackScreenProps<RootStackParamList, Screen.Home>;
-type ExtrasProps = NativeStackScreenProps<RootStackParamList, Screen.Extras>;
-type ContactsProps = NativeStackScreenProps<
-  RootStackParamList,
-  Screen.ContactList
->;
-type ConfigureProps = NativeStackScreenProps<
-  RootStackParamList,
-  Screen.Configure
->;
+const RootStack = createNativeStackNavigator<StackParamList>();
+const HomeTab = createMaterialTopTabNavigator();
+
+type HomeProps = NativeStackScreenProps<StackParamList, Screen.Home>;
+type ExtrasProps = NativeStackScreenProps<StackParamList, Screen.Extras>;
+type ContactsProps = NativeStackScreenProps<StackParamList, Screen.ContactList>;
+type ConfigureProps = NativeStackScreenProps<StackParamList, Screen.Configure>;
+type HomeTabProps = NativeStackScreenProps<StackParamList, Screen.HomeTab>;
 type NavProp =
   | HomeProps['navigation']
   | ExtrasProps['navigation']
   | ContactsProps['navigation']
-  | ConfigureProps['navigation'];
+  | ConfigureProps['navigation']
+  | HomeTabProps['navigation'];
 
 let contactsCache: Contacts.Contact[] | undefined;
 
@@ -106,6 +111,11 @@ interface AppData {
   favMusicGenre: string;
   emerContact1: string;
 }
+const APP_DATA_DEFAULTS = {
+  homeAddress: '',
+  favMusicGenre: '',
+  emerContact1: '',
+};
 let appDataCache: AppData | undefined;
 
 interface App {
@@ -134,7 +144,7 @@ const APPS: App[] = [
   },
   {
     key: 'phone',
-    name: 'Phone Calls',
+    name: 'Phone',
     icon: 'phone',
     callback: 'callPhone',
     cbParams: [],
@@ -147,17 +157,17 @@ const APPS: App[] = [
     package: 'com.google.android.apps.messaging',
   },
   {
+    key: 'voicemail',
+    name: 'Voicemail',
+    icon: 'voicemail',
+    asyncCallback: 'openVoicemail',
+  },
+  {
     key: 'missed',
     name: 'Missed Calls',
     icon: 'phone-missed',
-    url: 'content://call_log/calls', // TODO: CallLog.Calls.CONTENT_TYPE
+    url: 'content://call_log/calls', // TODO: fix
     depPackage: 'com.goodwy.dialer', // 'com.google.android.dialer',
-  },
-  {
-    key: 'weather',
-    name: 'Weather',
-    icon: 'wb-sunny',
-    url: 'dynact://velour/weather/ProxyActivity',
   },
   {
     key: 'camera',
@@ -186,10 +196,10 @@ const APPS: App[] = [
     package: 'in.smsoft.justremind', // 'com.google.android.deskclock'
   },
   {
-    key: 'flashlight',
-    name: 'Flashlight',
-    icon: 'lightbulb',
-    asyncCallback: 'toggleTorch',
+    key: 'weather',
+    name: 'Weather',
+    icon: 'wb-sunny',
+    url: 'dynact://velour/weather/ProxyActivity',
   },
   {
     key: 'emergency',
@@ -198,10 +208,10 @@ const APPS: App[] = [
     asyncCallback: 'emergencyCalls',
   },
   {
-    key: 'more',
-    name: 'More Apps',
-    icon: 'more-horiz',
-    screen: Screen.Extras,
+    key: 'magnifier',
+    name: 'Magnifier & Flashlight',
+    icon: 'saved-search',
+    asyncCallback: 'turnTorchOnAndMagnify',
   },
 ];
 
@@ -300,8 +310,20 @@ const BACKGROUND_APPS: App[] = [
   {
     key: 'locator',
     name: 'Find My Device',
-    icon: 'search',
+    icon: 'location-searching',
     package: 'com.google.android.apps.adm',
+  },
+  {
+    key: 'magnifier',
+    name: 'Magnifier & Flashlight',
+    icon: 'search',
+    package: MAGNIFIER,
+  },
+  {
+    key: 'voicemail',
+    name: 'Voicemail',
+    icon: 'voicemail',
+    package: VOICEMAILS[VOICEMAILS.length - 1],
   },
 ];
 
@@ -340,23 +362,35 @@ export async function openSpotify() {
   }
 }
 
-export async function toggleTorch() {
+export async function turnTorchOnAndMagnify() {
   const cameraAllowed = await Torch.requestCameraPermission(
     'Camera Permissions',
     "Camera permissions are required to use the phone's flashlight.",
   );
-  if (!cameraAllowed) {
-    return;
+  if (cameraAllowed) {
+    await Torch.switchState(true);
   }
-  const isTorchOn = await Torch.getStatus();
-  await Torch.switchState(!isTorchOn);
+  await SendIntentAndroid.openApp(MAGNIFIER, {});
+}
 
-  // const [modalVisible, setModalVisible] = globalStore.useState('modalVisible');
-  // const [, setModalText] = globalStore.useState('modalText');
-  // setModalText(`Flashlight is ${!isTorchOn ? 'ON' : 'OFF'}!`);
-  // setModalVisible(!modalVisible);
+async function turnTorchOff() {
+  try {
+    const isTorchOn = await Torch.getStatus();
+    if (isTorchOn) {
+      await Torch.switchState(true);
+    }
+  } catch (e) {}
+}
 
-  Alert.alert(`Flashlight is ${!isTorchOn ? 'ON' : 'OFF'}!`);
+export async function openVoicemail() {
+  for (const vmPkg of VOICEMAILS) {
+    if (await SendIntentAndroid.isAppInstalled(vmPkg)) {
+      await SendIntentAndroid.openApp(vmPkg, {});
+      return;
+    }
+  }
+  // None are installed, install last one
+  await Linking.openURL(PLAY_STORE_URL + VOICEMAILS[VOICEMAILS.length - 1]);
 }
 
 export async function pickAndCall() {
@@ -385,10 +419,10 @@ function alertAndWarn(msg: string) {
 const Header = (props: {text: string}) => {
   const tailwind = useTailwind();
   tailwind('h-20 h-12'); // Pre-compile for the ternary
-  const height = props.text.length > 15 ? 20 : 12;
+  const height = props.text.length > 20 ? 20 : 12;
 
   return (
-    <View style={tailwind(`flex flex-none w-full h-${height} bg-indigo-100`)}>
+    <View style={tailwind(`flex flex-none w-full h-${height} mt-4 mb-2`)}>
       <Text style={tailwind('text-4xl font-bold text-black text-center')}>
         {props.text}
       </Text>
@@ -396,44 +430,152 @@ const Header = (props: {text: string}) => {
   );
 };
 
-async function getCallLogs(): Promise<CallLogs.CallLog[]> {
-  const granted = await PermissionsAndroid.request(
-    PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
-    {
-      title: 'Call Log',
-      message: 'This app would like to access your call logs',
-      buttonPositive: 'OK',
-    },
-  );
-  if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-    const minTimestamp = Date.now() - 1000 * 60 * 60 * 24 * 30; // Only look back 1 month
-    return await CallLogs.load(100, {minTimestamp});
-  } else {
-    console.warn('Call Log permission denied');
+async function getMissedCalls(): Promise<Contacts.Contact[]> {
+  try {
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
+      {
+        title: 'Show Missed Calls',
+        message: 'This app would like to show your call logs.',
+        buttonNeutral: 'Ask Me Later',
+        buttonNegative: 'Cancel',
+        buttonPositive: 'OK',
+      },
+    );
+    if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+      console.warn('Read contacts permission denied');
+      return [];
+    }
+
+    const cutOffDate = Date.now() - 1000 * 60 * 60 * 24 * 30;
+    return await CallLogs.load(100, {minTimestamp: cutOffDate});
+  } catch (err) {
+    console.warn(err);
+    Alert.alert('Unable to retrieve call logs');
   }
   return [];
 }
 
-async function callVoicemail() {
-  const vmNum = await SendIntentAndroid.getVoiceMailNumber();
-  callPhone(vmNum);
-}
+const CallLog = (props: {
+  contact: Contacts.Contact;
+  app: App;
+  navigation: NavProp;
+}) => {
+  const tailwind = useTailwind();
+  // deep copy
+  const app = JSON.parse(JSON.stringify(props.app));
+  app.screen = undefined;
+  const tel = props.contact.phoneNumbers[0].number.replace(/[^0-9]/g, '');
+  if (app.url) {
+    app.url = app.url + tel;
+  }
+  if (app.cbParams !== undefined) {
+    app.cbParams.push(tel);
+  }
+  app.name = `${props.contact.givenName} ${props.contact.familyName}${
+    props.contact.isStarred ? '    ⭐' : ''
+  }`;
+  // app.key = `${app.key}-${props.contact.givenName}-${props.contact.familyName}`;
+  app.icon = 'person';
+
+  return (
+    <View
+      style={tailwind(
+        'flex w-full items-center m-1 border-b border-gray-600 bg-white',
+      )}>
+      <TouchableNativeFeedback
+        key={app.key}
+        onPress={async () => await handleApp(app, props.navigation)}>
+        <View style={tailwind('flex-row')}>
+          <View style={tailwind('w-1/5')}>
+            <Icon name={app.icon} size={40} color="#900" />
+          </View>
+          <View style={tailwind('w-4/5')}>
+            <Text style={tailwind('text-2xl font-bold text-black')}>
+              {app.name}
+            </Text>
+          </View>
+        </View>
+      </TouchableNativeFeedback>
+    </View>
+  );
+};
+
+const CallLogPanel = ({navigation, route}: ContactsProps) => {
+  const tailwind = useTailwind();
+
+  const [contacts, setContacts] = useState<Contacts.Contact[]>([]);
+  useEffect(() => {
+    getContacts()
+      .then(cnts => {
+        setContacts(
+          cnts.filter(
+            cnt =>
+              cnt.phoneNumbers.length > 0 &&
+              cnt.phoneNumbers[0].number &&
+              cnt.givenName.length > 0 &&
+              !['#', '*'].includes(cnt.givenName.charAt(0)),
+          ),
+        );
+      })
+      .catch(console.warn);
+  }, [contacts]);
+
+  const renderItem = (props: {item: Contacts.Contact}) => (
+    <Contact
+      contact={props.item}
+      app={route.params.app}
+      navigation={navigation}
+    />
+  );
+  const keyExtractor = (item: Contacts.Contact, idx: number) => {
+    return item?.recordID?.toString() || idx.toString();
+  };
+
+  return (
+    <View style={tailwind('flex-1 bg-white')}>
+      <Header text={route.params.app.name} />
+      <FlatList
+        data={contacts}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        itemHeight={40}
+        maxToRenderPerBatch={25}
+        updateCellsBatchingPeriod={100}
+      />
+    </View>
+  );
+};
+
+// async function callVoicemail() {
+//   const vmNum = await SendIntentAndroid.getVoiceMailNumber();
+//   callPhone(vmNum);
+// }
 
 async function getContacts(): Promise<Contacts.Contact[]> {
   if (contactsCache !== undefined) {
     return contactsCache;
   }
   try {
-    await PermissionsAndroid.request(
+    const granted = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
       {
-        title: 'Contacts',
-        message: 'This app would like to view your contacts.',
-        buttonPositive: 'Please accept',
+        title: 'Show Contacts',
+        message: 'This app would like to show your contacts.',
+        buttonNeutral: 'Ask Me Later',
+        buttonNegative: 'Cancel',
+        buttonPositive: 'OK',
       },
     );
+    if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+      console.warn('Read contacts permission denied');
+      return [];
+    }
 
     contactsCache = await Contacts.getAllWithoutPhotos();
+    if (!contactsCache) {
+      contactsCache = [];
+    }
     contactsCache.sort((a, b) => {
       if (a.isStarred && !b.isStarred) {
         return -1;
@@ -468,16 +610,18 @@ const Contact = (props: {
   if (app.cbParams !== undefined) {
     app.cbParams.push(tel);
   }
-  app.name = `${props.contact.givenName} ${props.contact.familyName}`;
-  app.key = `${app.key}-${props.contact.givenName}-${props.contact.familyName}`;
+  app.name = `${props.contact.givenName} ${props.contact.familyName}${
+    props.contact.isStarred ? '    ⭐' : ''
+  }`;
+  // app.key = `${app.key}-${props.contact.givenName}-${props.contact.familyName}`;
   app.icon = 'person';
 
   return (
     <View
       style={tailwind(
-        'flex w-full items-center rounded-xl m-1 border border-indigo-600 bg-white',
+        'flex w-full items-center m-1 border-b border-gray-600 bg-white',
       )}>
-      <TouchableOpacity
+      <TouchableNativeFeedback
         key={app.key}
         onPress={async () => await handleApp(app, props.navigation)}>
         <View style={tailwind('flex-row')}>
@@ -485,17 +629,36 @@ const Contact = (props: {
             <Icon name={app.icon} size={40} color="#900" />
           </View>
           <View style={tailwind('w-4/5')}>
-            <Text style={tailwind('text-2xl text-center font-bold text-black')}>
+            <Text style={tailwind('text-2xl font-bold text-black')}>
               {app.name}
             </Text>
           </View>
         </View>
-      </TouchableOpacity>
+      </TouchableNativeFeedback>
     </View>
   );
 };
 
 const ContactPanel = ({navigation, route}: ContactsProps) => {
+  const tailwind = useTailwind();
+
+  const [contacts, setContacts] = useState<Contacts.Contact[]>([]);
+  useEffect(() => {
+    getContacts()
+      .then(cnts => {
+        setContacts(
+          cnts.filter(
+            cnt =>
+              cnt.phoneNumbers.length > 0 &&
+              cnt.phoneNumbers[0].number &&
+              cnt.givenName.length > 0 &&
+              !['#', '*'].includes(cnt.givenName.charAt(0)),
+          ),
+        );
+      })
+      .catch(console.warn);
+  }, [contacts]);
+
   const renderItem = (props: {item: Contacts.Contact}) => (
     <Contact
       contact={props.item}
@@ -506,29 +669,17 @@ const ContactPanel = ({navigation, route}: ContactsProps) => {
   const keyExtractor = (item: Contacts.Contact, idx: number) => {
     return item?.recordID?.toString() || idx.toString();
   };
-  const [contacts, setContacts] = useState<Contacts.Contact[]>([]);
-  useEffect(() => {
-    getContacts()
-      .then(cnts => {
-        setContacts(
-          cnts.filter(
-            cnt =>
-              cnt.phoneNumbers.length > 0 &&
-              cnt.phoneNumbers[0].number &&
-              !['#', '*'].includes(cnt.givenName.charAt(0)),
-          ),
-        );
-      })
-      .catch(console.warn);
-  }, []);
 
   return (
-    <View>
+    <View style={tailwind('flex-1 bg-white')}>
       <Header text={route.params.app.name} />
       <FlatList
         data={contacts}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
+        itemHeight={40}
+        maxToRenderPerBatch={25}
+        updateCellsBatchingPeriod={100}
       />
     </View>
   );
@@ -574,24 +725,21 @@ async function getContactIdByName(name: string): Promise<string> {
   throw new Error(`${cnts.length} contacts with this name were found: ${name}`);
 }
 
-const ConfigurePanel = ({navigation}: ConfigureProps) => {
+const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
   const tailwind = useTailwind();
-  const optionStyle = tailwind('p-2');
-  const textStyle = tailwind('text-2xl font-bold text-black');
-  const inputStyle = tailwind(
-    'text-2xl font-bold text-black bg-white border border-indigo-200',
-  );
 
   const [apps, setApps] = useState<App[]>([]);
   useEffect(() => {
     PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.READ_CONTACTS, {
-      title: 'Contacts',
-      message: 'This app would like to view your contacts.',
+      title: 'Show Contacts',
+      message: 'This app would like to show your contacts.',
+      buttonNeutral: 'Ask Me Later',
+      buttonNegative: 'Cancel',
       buttonPositive: 'OK',
     })
       .then(() =>
         Torch.requestCameraPermission(
-          'Camera Permissions',
+          'Turn on Flashlight',
           "Camera permissions are required to use the phone's flashlight.",
         ),
       )
@@ -599,14 +747,18 @@ const ConfigurePanel = ({navigation}: ConfigureProps) => {
         PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
           {
-            title: 'Call Log',
-            message: 'This app would like to access your call logs',
+            title: 'Show Missed Calls',
+            message: 'This app would like to show your call logs.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
             buttonPositive: 'OK',
           },
         );
       })
       .catch(console.warn);
+  }, []);
 
+  useEffect(() => {
     const allApps = APPS.concat(EXTRA_APPS)
       .concat(BACKGROUND_APPS)
       .filter(app => app.package || app.depPackage);
@@ -620,20 +772,17 @@ const ConfigurePanel = ({navigation}: ConfigureProps) => {
     )
       .then(results => setApps(allApps.filter((app, i) => results[i])))
       .catch(console.warn);
-  });
+  }, [apps]);
 
   const {
     control,
     handleSubmit,
     formState: {errors},
   } = useForm<AppData>({
-    defaultValues: {
-      homeAddress: '',
-      favMusicGenre: '',
-      emerContact1: '',
-    },
+    defaultValues: route.params.defaults,
   });
   const [errTxt, setErrTxt] = useState<string>('');
+  const refs: any[] = [];
 
   const processInput = (input: string) => {
     return input.replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
@@ -663,7 +812,7 @@ const ConfigurePanel = ({navigation}: ConfigureProps) => {
       return;
     }
     appDataCache = {...data};
-    navigation.navigate(Screen.Home, {apps: APPS});
+    navigation.goBack();
   };
 
   const openApp = (pkg: string) => {
@@ -678,8 +827,17 @@ const ConfigurePanel = ({navigation}: ConfigureProps) => {
     };
   };
 
+  const optionStyle = tailwind('p-1');
+  const textStyle = tailwind('text-2xl font-bold text-black');
+  const inputStyle = tailwind(
+    'text-2xl font-bold text-black bg-white border border-indigo-200',
+  );
+  const errStyle = tailwind('text-xl font-bold text-red-600');
   return (
-    <KeyboardAvoidingView behavior="position" keyboardVerticalOffset={100}>
+    <KeyboardAwareScrollView
+      getTextInputRefs={() => {
+        return refs;
+      }}>
       <Header text={'Phone options'} />
       <View style={optionStyle}>
         <Button title="Phone Settings" onPress={openApp(SETTINGS)} />
@@ -689,7 +847,7 @@ const ConfigurePanel = ({navigation}: ConfigureProps) => {
       </View>
       {apps.length > 0 && (
         <View>
-          <Header text={'Install apps'} />
+          <Header text={'Install & configure'} />
           <View style={tailwind('flex flex-row flex-wrap m-2')}>
             {apps.map(app => {
               return (
@@ -705,7 +863,7 @@ const ConfigurePanel = ({navigation}: ConfigureProps) => {
           </View>
         </View>
       )}
-      <Header text={'Configure app'} />
+      <Header text={'Customize'} />
       <View style={optionStyle}>
         <Text style={textStyle}>Home Address</Text>
         <Controller
@@ -720,11 +878,14 @@ const ConfigurePanel = ({navigation}: ConfigureProps) => {
               onChangeText={onChange}
               placeholder="123 Main St, Small Town, CA 98765"
               value={value}
+              ref={(r: any) => {
+                refs.push(r);
+              }}
             />
           )}
           name="homeAddress"
         />
-        {errors.homeAddress && <Text>This is required.</Text>}
+        {errors.homeAddress && <Text style={errStyle}>This is required.</Text>}
       </View>
       <View style={optionStyle}>
         <Text style={textStyle}>Emergency Contact</Text>
@@ -744,7 +905,7 @@ const ConfigurePanel = ({navigation}: ConfigureProps) => {
           )}
           name="emerContact1"
         />
-        {errors.emerContact1 && <Text>This is required.</Text>}
+        {errors.emerContact1 && <Text style={errStyle}>This is required.</Text>}
       </View>
       <View style={optionStyle}>
         <Text style={textStyle}>Favorite Music Genre</Text>
@@ -765,9 +926,10 @@ const ConfigurePanel = ({navigation}: ConfigureProps) => {
           name="favMusicGenre"
         />
       </View>
-      <Text>{errTxt}</Text>
+      <Text style={errStyle}>{errTxt}</Text>
       <Button title="Submit" onPress={handleSubmit(onSubmit)} />
-    </KeyboardAvoidingView>
+      <View style={tailwind('h-5')} />
+    </KeyboardAwareScrollView>
   );
 };
 
@@ -792,10 +954,6 @@ export async function emergencyCalls() {
   }
 
   for (const contact of emerContacts) {
-    // SendIntentAndroid.sendSms(
-    //   contact.phoneNumbers[0].number,
-    //   'I have pressed the emergency button on my phone! Please call ASAP!',
-    // );
     SmsAndroid.sms(
       contact.phoneNumbers[0].number.replace(/[^0-9]/g, ''),
       'I have pressed the emergency button on my phone! Please call ASAP!',
@@ -853,6 +1011,15 @@ function getExport(varName: string): any {
   return module.exports[varName];
 }
 
+async function getAppDataOrDefault(): Promise<AppData> {
+  const data = (await getAppData()) ?? APP_DATA_DEFAULTS;
+  const emer = (await getContacts()).find(
+    cnt => cnt.recordID === data.emerContact1,
+  );
+  data.emerContact1 = emer ? `${emer.givenName} ${emer.familyName}` : '';
+  return data;
+}
+
 async function handleApp(app: App, navigation: NavProp) {
   console.log(app.name);
   if (app.package) {
@@ -875,14 +1042,13 @@ async function handleApp(app: App, navigation: NavProp) {
       case Screen.ContactList:
         navigation.navigate(app.screen, {app: app});
         break;
-      case Screen.Extras:
-        navigation.navigate(app.screen, {apps: EXTRA_APPS});
-        break;
       case Screen.Configure:
-        navigation.navigate(app.screen);
+        navigation.navigate(app.screen, {
+          defaults: await getAppDataOrDefault(),
+        });
         break;
       default:
-        alertAndWarn(`Unknown screen: ${app.screen}`);
+        alertAndWarn(`Unknown / disabled screen: ${app.screen}`);
     }
   } else if (app.url) {
     try {
@@ -924,61 +1090,30 @@ async function handleApp(app: App, navigation: NavProp) {
   }
 }
 
-// Re-enable when we fix the callback render issue
-// const AlertModal = () => {
-//   const tailwind = useTailwind();
-
-//   const [modalVisible, setModalVisible] = globalStore.useState('modalVisible');
-//   const [modalText] = globalStore.useState('modalText');
-
-//   return (
-//     <Modal
-//       animationType="fade"
-//       transparent={true}
-//       visible={modalVisible}
-//       onShow={() => {
-//         setTimeout(() => {
-//           setModalVisible(!modalVisible);
-//         }, 2000);
-//       }}
-//       onRequestClose={() => {
-//         setModalVisible(!modalVisible);
-//       }}>
-//       <View style={tailwind('flex justify-center')}>
-//         <View style={tailwind('rounded-xl mb-4 bg-red-200')}>
-//           <Text style={tailwind('text-4xl text-center font-bold text-black')}>
-//             {modalText}
-//           </Text>
-//         </View>
-//       </View>
-//     </Modal>
-//   );
-// };
-
 const AppOption = (props: {app: App; navigation: NavProp}) => {
   const tailwind = useTailwind();
 
   return (
     <View style={tailwind('flex w-1/3')}>
-      <View
-        style={tailwind(
-          'rounded-md m-1 items-center border border-indigo-600 bg-white',
-        )}>
-        <TouchableOpacity
-          key={props.app.key}
-          onPress={async () => await handleApp(props.app, props.navigation)}>
-          <Icon name={props.app.icon} size={90} color="#b00" />
+      <TouchableNativeFeedback
+        key={props.app.key}
+        onPress={async () => await handleApp(props.app, props.navigation)}>
+        <View
+          style={tailwind(
+            'rounded-md m-1 items-center border border-indigo-600 bg-white',
+          )}>
+          <Icon name={props.app.icon} size={90} color="#465c80" />
           <Text style={tailwind('text-xl text-center font-bold text-black')}>
             {props.app.name}
           </Text>
-        </TouchableOpacity>
-      </View>
+        </View>
+      </TouchableNativeFeedback>
     </View>
   );
 };
 
 function getDateTime() {
-  // Format by handle to avoid 6MB Intl library.
+  // Format by hand to avoid 6MB Intl library.
   // def jscFlavor = 'org.webkit:android-jsc-intl:+' // build.gradle
   // return new Date().toLocaleString('en', {
   //   timeStyle: 'short',
@@ -1007,7 +1142,7 @@ const Clock = () => {
     }, 5000);
 
     return () => clearInterval(secTimer);
-  }, []);
+  }, [dt]);
 
   return <Header text={dt} />;
 };
@@ -1016,15 +1151,18 @@ const AppPanel = ({navigation, route}: HomeProps | ExtrasProps) => {
   const tailwind = useTailwind();
 
   useEffect(() => {
+    if (route.name !== Screen.Home) {
+      return;
+    }
     getAppData()
       .then(data => {
         // Only load the configure screen once in app lifetime.
         if (data === null) {
-          navigation.navigate(Screen.Configure);
+          navigation.navigate(Screen.Configure, {defaults: APP_DATA_DEFAULTS});
         }
       })
       .catch(console.warn);
-  });
+  }, [navigation, route]);
 
   return (
     <View>
@@ -1038,8 +1176,37 @@ const AppPanel = ({navigation, route}: HomeProps | ExtrasProps) => {
   );
 };
 
+function HomeTabScreen() {
+  const tailwind = useTailwind();
+
+  return (
+    <HomeTab.Navigator
+      initialRouteName={Screen.Home}
+      screenOptions={{
+        tabBarShowLabel: false,
+        tabBarStyle: tailwind('h-2'),
+        tabBarIndicatorStyle: tailwind('h-2'),
+        // tabBarLabelStyle: tailwind('text-lg font-semibold text-black'),
+      }}>
+      <HomeTab.Screen
+        name={Screen.Home}
+        component={AppPanel}
+        initialParams={{apps: APPS}}
+        options={{tabBarLabel: 'Home'}}
+      />
+      <HomeTab.Screen
+        name={Screen.Extras}
+        component={AppPanel}
+        initialParams={{apps: EXTRA_APPS}}
+        options={{tabBarLabel: 'Extra'}}
+      />
+    </HomeTab.Navigator>
+  );
+}
+
 const App = () => {
   useEffect(() => {
+    // Low battery warning
     try {
       let lastBatteryState = 1.0;
       const unsubscribe = BatteryMonitor.onStateChange(status => {
@@ -1062,30 +1229,32 @@ const App = () => {
       });
       return () => unsubscribe();
     } catch {}
+    return () => {};
+  }, []);
+
+  useEffect(() => {
+    // Turn off flashlight if it's on
+    turnTorchOff().catch(console.log);
   }, []);
 
   return (
     <TailwindProvider utilities={utilities}>
       <NavigationContainer>
-        <RootStack.Navigator initialRouteName={Screen.Home}>
-          <RootStack.Screen
-            name={Screen.Home}
-            component={AppPanel}
-            initialParams={{apps: APPS}}
-          />
+        <RootStack.Navigator
+          initialRouteName={Screen.Home}
+          screenOptions={{
+            headerShown: false,
+          }}>
+          <RootStack.Screen name={Screen.HomeTab} component={HomeTabScreen} />
           <RootStack.Screen
             name={Screen.ContactList}
             component={ContactPanel}
             initialParams={{app: APPS[0]}}
           />
           <RootStack.Screen
-            name={Screen.Extras}
-            component={AppPanel}
-            initialParams={{apps: EXTRA_APPS}}
-          />
-          <RootStack.Screen
             name={Screen.Configure}
             component={ConfigurePanel}
+            initialParams={{defaults: APP_DATA_DEFAULTS}}
           />
         </RootStack.Navigator>
       </NavigationContainer>
