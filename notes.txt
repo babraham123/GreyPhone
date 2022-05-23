@@ -1,0 +1,55 @@
+GreyPhone
+
+Commands::
+npm run dev:tailwind
+npx react-native start
+npx react-native run-android
+
+adb -s R58R40KPAYM reverse tcp:8081 tcp:8081
+adb kill-server
+
+rm -rf android/app/src/main/assets/fonts
+
+
+Issues::
+Missed: dialer app, download manifest, intents
+  Content URL, connection to dialer?
+# of missed calls, unopened txts
+dialer
+
+
+Deep links::
+mailto;
+tel;
+sms;
+http / https;
+
+https://stackoverflow.com/questions/42536216/how-to-open-an-external-app-from-react-native-app
+https://wa.me/<number>
+whatsapp://app
+
+spotify://<type>/<id>
+npr daily news update
+spotify://show/6BRSvIBNQnB68GuoXJRCnQ?si=550b2541723f427d
+eritrean music
+spotify://playlist/0mJY721kZtX62bIkxJIsOf?si=21382e2a858d4397
+spotify://search/jazz%20and%20soul/playlists
+
+'4003 Paige View Road, Randallstown, MD, 21133'
+0mJY721kZtX62bIkxJIsOf
+
+Uber:
+uber://?action=setPickup&pickup=my_location&dropoff%5Bformatted_address%5D=Uber%20HQ%2C%20Market%20Street%2C%20San%20Francisco%2C%20CA%2C%20USA&dropoff%5Blatitude%5D=37.775231&dropoff%5Blongitude%5D=-122.417528 
+
+
+Reminder apps::
+https://play.google.com/store/apps/details?id=com.ToDoReminder.gen
+https://play.google.com/store/apps/details?id=in.smsoft.justremind
+https://play.google.com/store/apps/details?id=com.arthurivanets.reminder
+https://play.google.com/store/apps/details?id=com.todoist
+
+
+Readme::
+
+GreyPhone 
+

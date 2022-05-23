@@ -1,0 +1,255 @@
+{
+	"fixed": {
+		"style": {
+			"position": "fixed"
+		}
+	},
+	"absolute": {
+		"style": {
+			"position": "absolute"
+		}
+	},
+	"relative": {
+		"style": {
+			"position": "relative"
+		}
+	},
+	"m-2": {
+		"style": {
+			"marginTop": 8,
+			"marginRight": 8,
+			"marginBottom": 8,
+			"marginLeft": 8
+		}
+	},
+	"m-1": {
+		"style": {
+			"marginTop": 4,
+			"marginRight": 4,
+			"marginBottom": 4,
+			"marginLeft": 4
+		}
+	},
+	"mb-4": {
+		"style": {
+			"marginBottom": 16
+		}
+	},
+	"block": {
+		"style": {
+			"display": "block"
+		}
+	},
+	"inline": {
+		"style": {
+			"display": "inline"
+		}
+	},
+	"flex": {
+		"style": {
+			"display": "flex"
+		}
+	},
+	"hidden": {
+		"style": {
+			"display": "none"
+		}
+	},
+	"h-20": {
+		"style": {
+			"height": 80
+		}
+	},
+	"h-11": {
+		"style": {
+			"height": 44
+		}
+	},
+	"h-12": {
+		"style": {
+			"height": 48
+		}
+	},
+	"w-full": {
+		"style": {
+			"width": "100%"
+		}
+	},
+	"w-1/5": {
+		"style": {
+			"width": "20%"
+		}
+	},
+	"w-4/5": {
+		"style": {
+			"width": "80%"
+		}
+	},
+	"w-1/3": {
+		"style": {
+			"width": "33.333333%"
+		}
+	},
+	"flex-none": {
+		"style": {
+			"flexGrow": 0,
+			"flexShrink": 0,
+			"flexBasis": "auto"
+		}
+	},
+	"flex-row": {
+		"style": {
+			"flexDirection": "row"
+		}
+	},
+	"flex-wrap": {
+		"style": {
+			"flexWrap": "wrap"
+		}
+	},
+	"items-center": {
+		"style": {
+			"alignItems": "center"
+		}
+	},
+	"justify-center": {
+		"style": {
+			"justifyContent": "center"
+		}
+	},
+	"rounded-xl": {
+		"style": {
+			"borderTopLeftRadius": 12,
+			"borderTopRightRadius": 12,
+			"borderBottomRightRadius": 12,
+			"borderBottomLeftRadius": 12
+		}
+	},
+	"rounded-md": {
+		"style": {
+			"borderTopLeftRadius": 6,
+			"borderTopRightRadius": 6,
+			"borderBottomRightRadius": 6,
+			"borderBottomLeftRadius": 6
+		}
+	},
+	"border": {
+		"style": {
+			"borderTopWidth": 1,
+			"borderRightWidth": 1,
+			"borderBottomWidth": 1,
+			"borderLeftWidth": 1
+		}
+	},
+	"border-indigo-600": {
+		"style": {
+			"--tw-border-opacity": 1,
+			"borderTopColor": "rgb(79 70 229 / var(--tw-border-opacity))",
+			"borderRightColor": "rgb(79 70 229 / var(--tw-border-opacity))",
+			"borderBottomColor": "rgb(79 70 229 / var(--tw-border-opacity))",
+			"borderLeftColor": "rgb(79 70 229 / var(--tw-border-opacity))"
+		}
+	},
+	"border-indigo-200": {
+		"style": {
+			"--tw-border-opacity": 1,
+			"borderTopColor": "rgb(199 210 254 / var(--tw-border-opacity))",
+			"borderRightColor": "rgb(199 210 254 / var(--tw-border-opacity))",
+			"borderBottomColor": "rgb(199 210 254 / var(--tw-border-opacity))",
+			"borderLeftColor": "rgb(199 210 254 / var(--tw-border-opacity))"
+		}
+	},
+	"bg-indigo-100": {
+		"style": {
+			"--tw-bg-opacity": 1,
+			"backgroundColor": "rgb(224 231 255 / var(--tw-bg-opacity))"
+		}
+	},
+	"bg-white": {
+		"style": {
+			"--tw-bg-opacity": 1,
+			"backgroundColor": "rgb(255 255 255 / var(--tw-bg-opacity))"
+		}
+	},
+	"bg-red-200": {
+		"style": {
+			"--tw-bg-opacity": 1,
+			"backgroundColor": "rgb(254 202 202 / var(--tw-bg-opacity))"
+		}
+	},
+	"p-1": {
+		"style": {
+			"paddingTop": 4,
+			"paddingRight": 4,
+			"paddingBottom": 4,
+			"paddingLeft": 4
+		}
+	},
+	"p-2": {
+		"style": {
+			"paddingTop": 8,
+			"paddingRight": 8,
+			"paddingBottom": 8,
+			"paddingLeft": 8
+		}
+	},
+	"text-center": {
+		"style": {
+			"textAlign": "center"
+		}
+	},
+	"text-4xl": {
+		"style": {
+			"fontSize": 36,
+			"lineHeight": 40
+		}
+	},
+	"text-2xl": {
+		"style": {
+			"fontSize": 24,
+			"lineHeight": 32
+		}
+	},
+	"text-xl": {
+		"style": {
+			"fontSize": 20,
+			"lineHeight": 28
+		}
+	},
+	"text-xs": {
+		"style": {
+			"fontSize": 12,
+			"lineHeight": 16
+		}
+	},
+	"font-extrabold": {
+		"style": {
+			"fontWeight": "800"
+		}
+	},
+	"font-semibold": {
+		"style": {
+			"fontWeight": "600"
+		}
+	},
+	"font-medium": {
+		"style": {
+			"fontWeight": "500"
+		}
+	},
+	"font-black": {
+		"style": {
+			"fontWeight": "900"
+		}
+	},
+	"uppercase": {
+		"style": {
+			"textTransform": "uppercase"
+		}
+	},
+	"capitalize": {
+		"style": {
+			"textTransform": "capitalize"
+		}
+	}
+}
