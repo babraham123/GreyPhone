@@ -29,15 +29,16 @@ import {createMaterialTopTabNavigator} from '@react-navigation/material-top-tabs
 import SendIntentAndroid from 'react-native-send-intent';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Contacts from 'react-native-contacts';
-import CallDetectorManager from 'react-native-call-detection';
-import CallLogs from 'react-native-call-log'
+import CallLogs from 'react-native-call-log';
 import RNImmediatePhoneCall from 'react-native-immediate-phone-call';
 import Torch from 'react-native-torch';
 import {useForm, Controller} from 'react-hook-form';
 import SmsAndroid from 'react-native-sms-android';
 import {selectContactPhone} from 'react-native-select-contact';
-import BatteryMonitor from 'react-native-battery-monitor';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scrollview'
+import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scrollview';
+import DeviceInfo from 'react-native-device-info';
+
+const DEBUG = true;
 
 LogBox.ignoreLogs(['new NativeEventEmitter']);
 LogBox.ignoreAllLogs();
@@ -48,13 +49,6 @@ const UBER_URL_ROOT =
 const LAUNCHER = 'shubh.ruthless'; // 'com.google.android.apps.nexuslauncher'
 const SETTINGS = 'com.android.settings';
 const MAGNIFIER = 'com.app2u.magnifier';
-const VOICEMAILS = [
-  'com.google.android.dialer',
-  'com.tmobile.vvm.application',
-  'com.sprint.vvm',
-  'com.att.mobile.android.vvm',
-  'com.vna.service.vvm',
-];
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat'];
 const MONTHS = [
@@ -71,7 +65,8 @@ const MONTHS = [
   'Nov',
   'Dec',
 ];
-const BATTERY_LEVELS = [0.2, 0.1, 0.05, 0.03, 0.02, 0.01];
+const LOW_BATTERY = 0.15;
+const CALLS_LOOKBACK_MS = 1000 * 60 * 60 * 24 * 30; // 1 month
 
 export enum Screen {
   Home = 'Home',
@@ -104,6 +99,12 @@ type NavProp =
   | HomeTabProps['navigation'];
 
 let contactsCache: Contacts.Contact[] | undefined;
+
+interface PhoneInfo {
+  manufacturer: string;
+  carrier: string;
+}
+let phoneInfoCache: PhoneInfo | undefined;
 
 const APP_DATA_LABEL = '@AppData';
 interface AppData {
@@ -203,9 +204,9 @@ const APPS: App[] = [
   },
   {
     key: 'emergency',
-    name: 'Emergency',
+    name: 'Call for Help',
     icon: 'new-releases',
-    asyncCallback: 'emergencyCalls',
+    asyncCallback: 'helpCallsAndTexts',
   },
   {
     key: 'magnifier',
@@ -319,12 +320,6 @@ const BACKGROUND_APPS: App[] = [
     icon: 'search',
     package: MAGNIFIER,
   },
-  {
-    key: 'voicemail',
-    name: 'Voicemail',
-    icon: 'voicemail',
-    package: VOICEMAILS[VOICEMAILS.length - 1],
-  },
 ];
 
 export function openCamera() {
@@ -383,14 +378,16 @@ async function turnTorchOff() {
 }
 
 export async function openVoicemail() {
-  for (const vmPkg of VOICEMAILS) {
-    if (await SendIntentAndroid.isAppInstalled(vmPkg)) {
+  const vmPkg = await pickVisualVoicemailApp();
+  if (vmPkg) {
+    if (await checkInstalled(vmPkg)) {
       await SendIntentAndroid.openApp(vmPkg, {});
-      return;
     }
+    return;
+  } else {
+    const vmNum = await SendIntentAndroid.getVoiceMailNumber();
+    callPhone(vmNum);
   }
-  // None are installed, install last one
-  await Linking.openURL(PLAY_STORE_URL + VOICEMAILS[VOICEMAILS.length - 1]);
 }
 
 export async function pickAndCall() {
@@ -411,9 +408,15 @@ export function callPhone(phoneNum: string) {
   RNImmediatePhoneCall.immediatePhoneCall(num);
 }
 
+function alert(msg: string) {
+  if (DEBUG) {
+    Alert.alert(msg);
+  }
+}
+
 function alertAndWarn(msg: string) {
   console.warn(msg);
-  Alert.alert(msg);
+  alert(msg);
 }
 
 const Header = (props: {text: string}) => {
@@ -430,7 +433,7 @@ const Header = (props: {text: string}) => {
   );
 };
 
-async function getMissedCalls(): Promise<Contacts.Contact[]> {
+async function getMissedCalls(): Promise<CallLogs.CallLog[]> {
   try {
     const granted = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
@@ -447,11 +450,11 @@ async function getMissedCalls(): Promise<Contacts.Contact[]> {
       return [];
     }
 
-    const cutOffDate = Date.now() - 1000 * 60 * 60 * 24 * 30;
+    const cutOffDate = Date.now() - CALLS_LOOKBACK_MS;
     return await CallLogs.load(100, {minTimestamp: cutOffDate});
   } catch (err) {
     console.warn(err);
-    Alert.alert('Unable to retrieve call logs');
+    alert('Unable to retrieve call logs');
   }
   return [];
 }
@@ -532,6 +535,7 @@ const CallLogPanel = ({navigation, route}: ContactsProps) => {
     return item?.recordID?.toString() || idx.toString();
   };
 
+  // itemHeight={40}
   return (
     <View style={tailwind('flex-1 bg-white')}>
       <Header text={route.params.app.name} />
@@ -539,7 +543,6 @@ const CallLogPanel = ({navigation, route}: ContactsProps) => {
         data={contacts}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        itemHeight={40}
         maxToRenderPerBatch={25}
         updateCellsBatchingPeriod={100}
       />
@@ -547,10 +550,64 @@ const CallLogPanel = ({navigation, route}: ContactsProps) => {
   );
 };
 
-// async function callVoicemail() {
-//   const vmNum = await SendIntentAndroid.getVoiceMailNumber();
-//   callPhone(vmNum);
-// }
+async function getPhoneInfo(): Promise<PhoneInfo> {
+  function parseResult(val?: string | null): string {
+    if (!val || val === 'nil') {
+      return '';
+    }
+    return val.toLowerCase();
+  }
+
+  if (phoneInfoCache !== undefined) {
+    return phoneInfoCache;
+  }
+  try {
+    phoneInfoCache = {
+      manufacturer: parseResult(await DeviceInfo.getManufacturer()),
+      carrier: parseResult(await DeviceInfo.getCarrier()),
+    };
+    console.log(`Retrieved phone info: ${JSON.stringify(phoneInfoCache)}`);
+  } catch (err) {
+    console.warn(err);
+    phoneInfoCache = {
+      manufacturer: '',
+      carrier: '',
+    };
+  }
+  return phoneInfoCache;
+}
+
+async function pickVisualVoicemailApp(): Promise<string | undefined> {
+  const phoneInfo = await getPhoneInfo();
+
+  // https://developers.google.com/zero-touch/resources/manufacturer-names
+  if (phoneInfo.manufacturer === 'google') {
+    return 'com.google.android.dialer';
+  } else if (phoneInfo.manufacturer === 'samsung') {
+    return 'com.samsung.vvm';
+  }
+
+  // https://source.android.com/devices/tech/config/carrierid
+  // https://android.googlesource.com/platform/packages/providers/TelephonyProvider/+/master/assets/latest_carrier_id/carrier_list.textpb
+  if (phoneInfo.carrier.startsWith('at&t')) {
+    return 'com.att.mobile.android.vvm';
+  } else if (phoneInfo.carrier.startsWith('t-mobile')) {
+    return 'com.vna.service.vvm';
+  } else if (phoneInfo.carrier.startsWith('sprint')) {
+    return 'com.sprint.vvm';
+  } else if (phoneInfo.carrier.startsWith('metropcs')) {
+    return 'com.metropcs.service.vvm';
+  } else if (phoneInfo.carrier.startsWith('cricket')) {
+    return 'com.mizmowireless.vvm';
+  } else if (
+    phoneInfo.carrier.startsWith('dish') ||
+    phoneInfo.carrier.startsWith('boost')
+  ) {
+    return 'com.dish.vvm';
+  }
+
+  return undefined;
+}
 
 async function getContacts(): Promise<Contacts.Contact[]> {
   if (contactsCache !== undefined) {
@@ -585,12 +642,12 @@ async function getContacts(): Promise<Contacts.Contact[]> {
         return a.givenName > b.givenName ? 1 : -1;
       }
     });
+    console.log(`${contactsCache.length} contacts retrieved.`);
   } catch (err) {
     console.warn(err);
-    Alert.alert('Unable to retrieve contacts');
+    alert('Unable to retrieve contacts');
     contactsCache = [];
   }
-  console.log(`${contactsCache.length} contacts retrieved.`);
   return contactsCache;
 }
 
@@ -670,6 +727,7 @@ const ContactPanel = ({navigation, route}: ContactsProps) => {
     return item?.recordID?.toString() || idx.toString();
   };
 
+  // itemHeight={40}
   return (
     <View style={tailwind('flex-1 bg-white')}>
       <Header text={route.params.app.name} />
@@ -677,7 +735,6 @@ const ContactPanel = ({navigation, route}: ContactsProps) => {
         data={contacts}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        itemHeight={40}
         maxToRenderPerBatch={25}
         updateCellsBatchingPeriod={100}
       />
@@ -697,7 +754,7 @@ async function getAppData(): Promise<AppData | null> {
     appDataCache = JSON.parse(jsonVal);
   } catch (err) {
     console.warn(err);
-    Alert.alert('Unable to retrieve app configurations');
+    alert('Unable to retrieve app configurations');
     return null;
   }
 
@@ -762,15 +819,29 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
     const allApps = APPS.concat(EXTRA_APPS)
       .concat(BACKGROUND_APPS)
       .filter(app => app.package || app.depPackage);
-    Promise.all(
-      allApps.map(
-        async app =>
-          !(await SendIntentAndroid.isAppInstalled(
-            app.package ?? app.depPackage ?? '',
-          )),
-      ),
-    )
-      .then(results => setApps(allApps.filter((app, i) => results[i])))
+    // Dynamically pick the correct vvm app
+    pickVisualVoicemailApp()
+      .then(vmPkg => {
+        if (vmPkg) {
+          const vmApp = {
+            key: 'voicemail',
+            name: 'Voicemail',
+            icon: 'voicemail',
+            package: vmPkg,
+          };
+          allApps.push(vmApp);
+        }
+        Promise.all(
+          allApps.map(
+            async app =>
+              !(await SendIntentAndroid.isAppInstalled(
+                app.package ?? app.depPackage ?? '',
+              )),
+          ),
+        )
+          .then(results => setApps(allApps.filter((app, i) => results[i])))
+          .catch(console.warn);
+      })
       .catch(console.warn);
   }, [apps]);
 
@@ -933,9 +1004,9 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
   );
 };
 
-async function wait(sec: number) {
-  return new Promise(res => setTimeout(res, sec * 1000));
-}
+// async function wait(sec: number) {
+//   return new Promise(res => setTimeout(res, sec * 1000));
+// }
 
 async function getEmergencyContacts(): Promise<Contacts.Contact[]> {
   const data = await getAppData();
@@ -946,52 +1017,51 @@ async function getEmergencyContacts(): Promise<Contacts.Contact[]> {
   return (await getContacts()).filter(cnt => ids.includes(cnt.recordID));
 }
 
-export async function emergencyCalls() {
+export async function helpCallsAndTexts() {
   const emerContacts = await getEmergencyContacts();
   if (emerContacts.length === 0) {
-    alertAndWarn('No emergency contacts have been added. Call 911!');
+    alertAndWarn('No emergency contacts have been added.');
     return;
   }
 
   for (const contact of emerContacts) {
     SmsAndroid.sms(
       contact.phoneNumbers[0].number.replace(/[^0-9]/g, ''),
-      'I have pressed the emergency button on my phone! Please call ASAP!',
+      'I have pressed the help button on my phone! Please call ASAP!',
       'sendDirect',
       (err: Error, msg: string) => {
         if (err) {
           console.warn(err);
-          Alert.alert('Failed to send emergency text msg');
+          alert('Failed to send help text msg');
         } else {
           console.log(msg);
         }
       },
     );
 
-    // TODO: finish
-    const callDetector = new CallDetectorManager(
-      (event: string, phoneNumber: string) => {
-        console.log(`Call state: ${event}, phone: ${phoneNumber}`);
-        // Ignore iOS call states
-        if (event === 'Disconnected') {
-          // qqq
-        } else if (event === 'Incoming') {
-          // qqq
-        } else if (event === 'Offhook') {
-          // At least one call exists that is dialing, active, or on hold,
-          // and no calls are ringing or waiting.
-          // qqq
-        } else if (event === 'Missed') {
-          // qqq
-        }
-      },
-      true,
-    );
+    // const callDetector = new CallDetectorManager(
+    //   (event: string, phoneNumber: string) => {
+    //     console.log(`Call state: ${event}, phone: ${phoneNumber}`);
+    //     // Ignore iOS call states
+    //     if (event === 'Disconnected') {
+    //       // qqq
+    //     } else if (event === 'Incoming') {
+    //       // qqq
+    //     } else if (event === 'Offhook') {
+    //       // At least one call exists that is dialing, active, or on hold,
+    //       // and no calls are ringing or waiting.
+    //       // qqq
+    //     } else if (event === 'Missed') {
+    //       // qqq
+    //     }
+    //   },
+    //   true,
+    // );
 
     callPhone(contact.phoneNumbers[0].number);
     console.log(`Called: ${contact.phoneNumbers[0].number}`);
-    await wait(60);
-    callDetector.dispose();
+    // await wait(60);
+    // callDetector.dispose();
   }
 }
 
@@ -1031,7 +1101,7 @@ async function handleApp(app: App, navigation: NavProp) {
     }
   } catch (err) {
     console.warn(err);
-    Alert.alert(`Unable to install package: ${app.depPackage}`);
+    alert(`Unable to install package: ${app.depPackage}`);
   }
   if (!app.cbParams) {
     app.cbParams = [];
@@ -1061,32 +1131,32 @@ async function handleApp(app: App, navigation: NavProp) {
       }
     } catch (err) {
       console.warn(err);
-      Alert.alert(`Bad URL: ${app.url}`);
+      alert(`Bad URL: ${app.url}`);
     }
   } else if (app.package) {
     try {
       await SendIntentAndroid.openApp(app.package, {});
     } catch (err) {
       console.warn(err);
-      Alert.alert(`Bad pkg: ${app.package}`);
+      alert(`Bad pkg: ${app.package}`);
     }
   } else if (app.callback) {
     try {
       getExport(app.callback)(...app.cbParams);
     } catch (err) {
       console.warn(err);
-      Alert.alert(`Bad app callback: ${app.name}`);
+      alert(`Bad app callback: ${app.name}`);
     }
   } else if (app.asyncCallback) {
     try {
       await getExport(app.asyncCallback)(...app.cbParams);
     } catch (err) {
       console.warn(err);
-      Alert.alert(`Bad app callback: ${app.name}`);
+      alert(`Bad app callback: ${app.name}`);
     }
   } else {
     console.warn(JSON.stringify(app));
-    Alert.alert(`Invalid app: ${app.name}`);
+    alert(`Invalid app: ${app.name}`);
   }
 }
 
@@ -1206,30 +1276,27 @@ function HomeTabScreen() {
 
 const App = () => {
   useEffect(() => {
-    // Low battery warning
-    try {
-      let lastBatteryState = 1.0;
-      const unsubscribe = BatteryMonitor.onStateChange(status => {
-        if (status.state !== 'unplugged') {
-          lastBatteryState = status.level;
-          return;
+    DeviceInfo.getPowerState()
+      .then(power => {
+        // {
+        //   batteryLevel: 0.759999,
+        //   batteryState: 'unplugged',
+        //   lowPowerMode: false,
+        // }
+        if (
+          power.batteryState === 'unplugged' &&
+          power.batteryLevel &&
+          power.batteryLevel < LOW_BATTERY
+        ) {
+          const msg =
+            power.batteryLevel >= power.batteryLevel / 2
+              ? 'Please charge phone.'
+              : 'Charge phone immediately!';
+          const lvl = Math.round(power.batteryLevel * 100);
+          Alert.alert(`Warning, battery is low (${lvl}%). ${msg}`);
         }
-        for (const level of BATTERY_LEVELS) {
-          if (lastBatteryState > level && status.level <= level) {
-            const msg =
-              status.level >= 0.05
-                ? 'Please charge phone.'
-                : 'Charge phone immediately!';
-            const lvl = Math.round(status.level * 100);
-            Alert.alert(`Warning, battery is low (${lvl}%). ${msg}`);
-            break;
-          }
-        }
-        lastBatteryState = status.level;
-      });
-      return () => unsubscribe();
-    } catch {}
-    return () => {};
+      })
+      .catch(console.warn);
   }, []);
 
   useEffect(() => {

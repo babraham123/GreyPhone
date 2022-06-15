@@ -12,10 +12,12 @@ rm -rf android/app/src/main/assets/fonts
 
 
 Issues::
-Missed: dialer app, download manifest, intents
-  Content URL, connection to dialer?
+Missed: Content URL, connection to dialer?
 # of missed calls, unopened txts
 dialer
+
+Warning: Can't perform a React state update on an unmounted component. This is a no-op, but it indicates a memory leak in your application. To fix, cancel all subscriptions and asynchronous tasks in a useEffect cleanup function.
+    in ContactPanel (at SceneView.tsx:132)
 
 
 Deep links::
@@ -52,9 +54,15 @@ sprint: com.sprint.vvm
 at&t: com.att.mobile.android.vvm
 verizon: ??
 
-Issue::
+call-log commit: 5bd0152bb3cf9c0e4073af1f95e5ebb84033d387
 
-Warning: Can't perform a React state update on an unmounted component. This is a no-op, but it indicates a memory leak in your application. To fix, cancel all subscriptions and asynchronous tasks in a useEffect cleanup function.
-    in ContactPanel (at SceneView.tsx:132)
+
+call-log babel issue
+https://github.com/babel/babel/issues/14139
+voicemail
+https://stackoverflow.com/questions/11744063/using-voicemailcontract-gives-permissions-error
+
+state pool, global hooks:
+https://yezyilomo.github.io/state-pool/docs/introduction/getting_started/
 
 

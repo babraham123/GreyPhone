@@ -6083,11 +6083,6 @@
   "resolved" "https://registry.npmjs.org/react-native-action-sheet/-/react-native-action-sheet-2.2.0.tgz"
   "version" "2.2.0"
 
-"react-native-battery-monitor@^0.0.2":
-  "integrity" "sha512-qnVt7ofNhB8T3n1BB0x710tIYZhk6fpSXXJCNIPpIG+tWjpYLhZk0ClORrXrwZelnaYlJ/urhjmmanFF5SUZug=="
-  "resolved" "https://registry.npmjs.org/react-native-battery-monitor/-/react-native-battery-monitor-0.0.2.tgz"
-  "version" "0.0.2"
-
 "react-native-call-detection@github:priteshrnandgaonkar/react-native-call-detection#a74ddb3cd4adeddf44bae58b09233bd219702aeb":
   "integrity" "sha512-8xRo+YgQGGgj6SptiNXAYom9WBy/LRfN8nSZlB1yN0m2hPRdx1Kxn06bcEn/5TBzG6Oyp+GIHR7Dy9KPJ8t/0g=="
   "resolved" "git+ssh://git@github.com/priteshrnandgaonkar/react-native-call-detection.git#a74ddb3cd4adeddf44bae58b09233bd219702aeb"
@@ -6111,6 +6106,11 @@
   "integrity" "sha512-Jl+kXQsa2xO/lTX8B5HK8Np1YTXIRAAFfRUglvzNKUVMiMtXY1x8VOtms8VShDBjLy9KioeesvFVmgalg+/IQA=="
   "resolved" "git+ssh://git@github.com/morenoh149/react-native-contacts.git#76e72ebb7c31cb0c516a34e238c926ab14d6cb33"
   "version" "7.0.4"
+
+"react-native-device-info@^9.0.2":
+  "integrity" "sha512-+IfYZ/OuKjnFf7SFfgIzEqynSeFngrIHc5KgHUIfXusLDXIFJ+LhRBCD7skqnraHrfmESUOMjLbNcvy4SVdwSA=="
+  "resolved" "https://registry.npmjs.org/react-native-device-info/-/react-native-device-info-9.0.2.tgz"
+  "version" "9.0.2"
 
 "react-native-immediate-phone-call@^2.0.0":
   "integrity" "sha512-ImE+KfiuuVS+A6BZ2jkVkJsXzvOpREh/YubdhgJ7CYdbMLbieBG56K28B+M3evMaMFzs9reGFmQpDTMTIJBjaQ=="
@@ -6180,7 +6180,7 @@
     "prop-types" "^15.7.2"
     "yargs" "^16.1.1"
 
-"react-native@*", "react-native@^0.0.0-0 || 0.60 - 0.68 || 1000.0.0", "react-native@>=0.19.0", "react-native@>=0.25.1", "react-native@>=0.26.0", "react-native@>=0.51.0", "react-native@>=0.59", "react-native@>=0.60.0", "react-native@>=0.64.0", "react-native@0.66.4":
+"react-native@*", "react-native@^0.0.0-0 || 0.60 - 0.68 || 1000.0.0", "react-native@>=0.19.0", "react-native@>=0.25.1", "react-native@>=0.26.0", "react-native@>=0.51.0", "react-native@>=0.59", "react-native@>=0.64.0", "react-native@0.66.4":
   "integrity" "sha512-9vx5dlSfQlKbbDtr8+xMon6qsmSu7jvjdXWZpEKh3XVKpUidbbODv7048gwVKX8YAel1egeR7hN8vzSeI6ssTw=="
   "resolved" "https://registry.npmjs.org/react-native/-/react-native-0.66.4.tgz"
   "version" "0.66.4"
@@ -6240,7 +6240,7 @@
     "react-shallow-renderer" "^16.13.1"
     "scheduler" "^0.20.2"
 
-"react@*", "react@^16.0.0 || ^17.0.0 || ^18.0.0", "react@^16.8.0 || ^17 || ^18", "react@^16.8.0 || ^17.0.0 || ^18.0.0", "react@^17.0.0", "react@>=0.14.5", "react@>=16.8.0", "react@>=16.8.6", "react@17.0.2":
+"react@*", "react@^16.0.0 || ^17.0.0 || ^18.0.0", "react@^16.8.0 || ^17 || ^18", "react@^16.8.0 || ^17.0.0 || ^18.0.0", "react@^17.0.0", "react@>=0.14.5", "react@>=16.8.0", "react@17.0.2":
   "integrity" "sha512-gnhPt75i/dq/z3/6q/0asP78D0u592D5L1pd7M8P+dck6Fu/jJeL6iVVK23fptSUZj8Vjf++7wXA8UNclGQcbA=="
   "resolved" "https://registry.npmjs.org/react/-/react-17.0.2.tgz"
   "version" "17.0.2"
