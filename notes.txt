@@ -50,12 +50,18 @@ https://play.google.com/store/apps/details?id=com.todoist
 Voicemail:
 basic: com.vna.service.vvm
 tmobile: com.tmobile.vvm.application
-sprint: com.sprint.vvm
+  metro: com.metropcs.service.vvm
 at&t: com.att.mobile.android.vvm
+  samsung: samsung.attvvm
+  cricket: com.mizmowireless.vvm
 verizon: ??
+  samsung: samsung.vvm
+dish: com.dish.vvm
+sprint: com.sprint.vvm
+
 
 call-log commit: 5bd0152bb3cf9c0e4073af1f95e5ebb84033d387
-
+npm install github:priteshrnandgaonkar/react-native-call-detection#a74ddb3cd4adeddf44bae58b09233bd219702aebß
 
 call-log babel issue
 https://github.com/babel/babel/issues/14139
@@ -65,4 +71,9 @@ https://stackoverflow.com/questions/11744063/using-voicemailcontract-gives-permi
 state pool, global hooks:
 https://yezyilomo.github.io/state-pool/docs/introduction/getting_started/
 
+different git accts:
+https://stackoverflow.com/questions/4220416/can-i-specify-multiple-users-for-myself-in-gitconfig
+https://www.freecodecamp.org/news/how-to-handle-multiple-git-configurations-in-one-machine/
+PAT:
+https://stackoverflow.com/questions/18935539/authenticate-with-github-using-a-token
 

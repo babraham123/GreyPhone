@@ -29,7 +29,7 @@ import {createMaterialTopTabNavigator} from '@react-navigation/material-top-tabs
 import SendIntentAndroid from 'react-native-send-intent';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Contacts from 'react-native-contacts';
-import CallLogs from 'react-native-call-log';
+import CallLogs, {CallLog} from 'react-native-call-log';
 import RNImmediatePhoneCall from 'react-native-immediate-phone-call';
 import Torch from 'react-native-torch';
 import {useForm, Controller} from 'react-hook-form';
@@ -38,7 +38,7 @@ import {selectContactPhone} from 'react-native-select-contact';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scrollview';
 import DeviceInfo from 'react-native-device-info';
 
-const DEBUG = true;
+const DEBUG = false;
 
 LogBox.ignoreLogs(['new NativeEventEmitter']);
 LogBox.ignoreAllLogs();
@@ -72,6 +72,7 @@ export enum Screen {
   Home = 'Home',
   Extras = 'Extras',
   ContactList = 'ContactList',
+  CallLogList = 'CallLogList',
   Configure = 'Configure',
   HomeTab = 'HomeTab',
 }
@@ -79,6 +80,7 @@ type StackParamList = {
   Home: {apps: App[]};
   Extras: {apps: App[]};
   ContactList: {app: App};
+  CallLogList: {app: App};
   Configure: {defaults: AppData};
   HomeTab: undefined;
 };
@@ -89,12 +91,14 @@ const HomeTab = createMaterialTopTabNavigator();
 type HomeProps = NativeStackScreenProps<StackParamList, Screen.Home>;
 type ExtrasProps = NativeStackScreenProps<StackParamList, Screen.Extras>;
 type ContactsProps = NativeStackScreenProps<StackParamList, Screen.ContactList>;
+type CallLogProps = NativeStackScreenProps<StackParamList, Screen.CallLogList>;
 type ConfigureProps = NativeStackScreenProps<StackParamList, Screen.Configure>;
 type HomeTabProps = NativeStackScreenProps<StackParamList, Screen.HomeTab>;
 type NavProp =
   | HomeProps['navigation']
   | ExtrasProps['navigation']
   | ContactsProps['navigation']
+  | CallLogProps['navigation']
   | ConfigureProps['navigation']
   | HomeTabProps['navigation'];
 
@@ -167,8 +171,9 @@ const APPS: App[] = [
     key: 'missed',
     name: 'Missed Calls',
     icon: 'phone-missed',
-    url: 'content://call_log/calls', // TODO: fix
-    depPackage: 'com.goodwy.dialer', // 'com.google.android.dialer',
+    callback: 'callPhone',
+    cbParams: [],
+    screen: Screen.CallLogList,
   },
   {
     key: 'camera',
@@ -383,7 +388,6 @@ export async function openVoicemail() {
     if (await checkInstalled(vmPkg)) {
       await SendIntentAndroid.openApp(vmPkg, {});
     }
-    return;
   } else {
     const vmNum = await SendIntentAndroid.getVoiceMailNumber();
     callPhone(vmNum);
@@ -433,7 +437,21 @@ const Header = (props: {text: string}) => {
   );
 };
 
-async function getMissedCalls(): Promise<CallLogs.CallLog[]> {
+function getDate(date: Date): string {
+  return `${date.getMonth()}/${date.getDate()}/${date.getFullYear()}`;
+}
+
+function getTime(date: Date): string {
+  let hrs = date.getHours() % 12;
+  if (hrs === 0) {
+    hrs = 12;
+  }
+  const meridiem = date.getHours() < 12 ? 'a' : 'p';
+  return `${hrs}:${date.getMinutes()}${meridiem}`;
+}
+
+async function getMissedCalls(): Promise<CallLog[]> {
+  let calls: CallLog[] = [];
   try {
     const granted = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
@@ -451,35 +469,72 @@ async function getMissedCalls(): Promise<CallLogs.CallLog[]> {
     }
 
     const cutOffDate = Date.now() - CALLS_LOOKBACK_MS;
-    return await CallLogs.load(100, {minTimestamp: cutOffDate});
+    // Received in descending order
+    calls = await CallLogs.load(100, {
+      minTimestamp: cutOffDate,
+      types: 'MISSED',
+    });
   } catch (err) {
     console.warn(err);
     alert('Unable to retrieve call logs');
   }
-  return [];
+  if (calls.length === 0) {
+    return [];
+  }
+
+  const today = getDate(new Date());
+  // Reuse rawType to store the number of duplicates
+  // Change the formatting in dateTime
+  function processCall(call: CallLog): CallLog {
+    call.rawType = 1;
+    const dt = new Date(parseInt(call.timestamp, 10));
+    const date = getDate(dt);
+    const time = getTime(dt);
+    if (date === today) {
+      call.dateTime = time;
+    } else {
+      call.dateTime = `${date} ${time}`;
+    }
+    return call;
+  }
+
+  // Merge duplicate calls
+  const mergedCalls = [processCall(calls[0])];
+  for (let i = 1; i < calls.length; i++) {
+    const lastCall = mergedCalls[mergedCalls.length - 1];
+    if (lastCall.phoneNumber === calls[i].phoneNumber) {
+      lastCall.rawType++; // inc counter
+      if (calls[i].duration > lastCall.duration) {
+        lastCall.duration = calls[i].duration; // store max duration
+      }
+    } else {
+      calls[i].rawType = 1;
+      mergedCalls.push(processCall(calls[i]));
+    }
+  }
+  return mergedCalls;
 }
 
-const CallLog = (props: {
-  contact: Contacts.Contact;
-  app: App;
-  navigation: NavProp;
-}) => {
+const CallWidget = (props: {call: CallLog; app: App; navigation: NavProp}) => {
   const tailwind = useTailwind();
   // deep copy
   const app = JSON.parse(JSON.stringify(props.app));
   app.screen = undefined;
-  const tel = props.contact.phoneNumbers[0].number.replace(/[^0-9]/g, '');
+  const tel = props.call.phoneNumber.replace(/[^0-9]/g, '');
   if (app.url) {
     app.url = app.url + tel;
   }
   if (app.cbParams !== undefined) {
     app.cbParams.push(tel);
   }
-  app.name = `${props.contact.givenName} ${props.contact.familyName}${
-    props.contact.isStarred ? '    ⭐' : ''
+
+  const name = props.call.name || props.call.phoneNumber;
+  const dups = props.call.rawType > 1 ? ` (${props.call.rawType})` : '';
+  const duration = `${Math.floor(props.call.duration / 60)}:${
+    props.call.duration % 60
   }`;
-  // app.key = `${app.key}-${props.contact.givenName}-${props.contact.familyName}`;
-  app.icon = 'person';
+  app.name = `${name}${dups}\n${props.call.dateTime}, ${duration}`;
+  app.icon = 'call-missed';
 
   return (
     <View
@@ -490,11 +545,11 @@ const CallLog = (props: {
         key={app.key}
         onPress={async () => await handleApp(app, props.navigation)}>
         <View style={tailwind('flex-row')}>
-          <View style={tailwind('w-1/5')}>
+          <View style={tailwind('w-1/6')}>
             <Icon name={app.icon} size={40} color="#900" />
           </View>
-          <View style={tailwind('w-4/5')}>
-            <Text style={tailwind('text-2xl font-bold text-black')}>
+          <View style={tailwind('w-5/6')}>
+            <Text style={tailwind('text-xl font-bold text-black')}>
               {app.name}
             </Text>
           </View>
@@ -504,35 +559,25 @@ const CallLog = (props: {
   );
 };
 
-const CallLogPanel = ({navigation, route}: ContactsProps) => {
+const CallLogPanel = ({navigation, route}: CallLogProps) => {
   const tailwind = useTailwind();
 
-  const [contacts, setContacts] = useState<Contacts.Contact[]>([]);
+  const [missedCalls, setMissedCalls] = useState<CallLog[]>([]);
   useEffect(() => {
-    getContacts()
-      .then(cnts => {
-        setContacts(
-          cnts.filter(
-            cnt =>
-              cnt.phoneNumbers.length > 0 &&
-              cnt.phoneNumbers[0].number &&
-              cnt.givenName.length > 0 &&
-              !['#', '*'].includes(cnt.givenName.charAt(0)),
-          ),
-        );
-      })
+    getMissedCalls()
+      .then(calls => setMissedCalls(calls))
       .catch(console.warn);
-  }, [contacts]);
+  }, [missedCalls]);
 
-  const renderItem = (props: {item: Contacts.Contact}) => (
-    <Contact
-      contact={props.item}
+  const renderItem = (props: {item: CallLog}) => (
+    <CallWidget
+      call={props.item}
       app={route.params.app}
       navigation={navigation}
     />
   );
-  const keyExtractor = (item: Contacts.Contact, idx: number) => {
-    return item?.recordID?.toString() || idx.toString();
+  const keyExtractor = (item: CallLog, idx: number) => {
+    return item.timestamp || idx.toString();
   };
 
   // itemHeight={40}
@@ -540,7 +585,7 @@ const CallLogPanel = ({navigation, route}: ContactsProps) => {
     <View style={tailwind('flex-1 bg-white')}>
       <Header text={route.params.app.name} />
       <FlatList
-        data={contacts}
+        data={missedCalls}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         maxToRenderPerBatch={25}
@@ -589,6 +634,7 @@ async function pickVisualVoicemailApp(): Promise<string | undefined> {
 
   // https://source.android.com/devices/tech/config/carrierid
   // https://android.googlesource.com/platform/packages/providers/TelephonyProvider/+/master/assets/latest_carrier_id/carrier_list.textpb
+  // https://en.wikipedia.org/wiki/List_of_mobile_network_operators_of_the_Americas#United_States
   if (phoneInfo.carrier.startsWith('at&t')) {
     return 'com.att.mobile.android.vvm';
   } else if (phoneInfo.carrier.startsWith('t-mobile')) {
@@ -1110,6 +1156,7 @@ async function handleApp(app: App, navigation: NavProp) {
   if (app.screen) {
     switch (app.screen) {
       case Screen.ContactList:
+      case Screen.CallLogList:
         navigation.navigate(app.screen, {app: app});
         break;
       case Screen.Configure:
@@ -1316,6 +1363,11 @@ const App = () => {
           <RootStack.Screen
             name={Screen.ContactList}
             component={ContactPanel}
+            initialParams={{app: APPS[0]}}
+          />
+          <RootStack.Screen
+            name={Screen.CallLogList}
+            component={CallLogPanel}
             initialParams={{app: APPS[0]}}
           />
           <RootStack.Screen
