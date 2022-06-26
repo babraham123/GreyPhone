@@ -206,6 +206,7 @@ const APPS: App[] = [
     name: 'Weather',
     icon: 'wb-sunny',
     url: 'dynact://velour/weather/ProxyActivity',
+    depPackage: 'com.google.android.googlequicksearchbox',
   },
   {
     key: 'emergency',
@@ -226,7 +227,8 @@ const EXTRA_APPS: App[] = [
     key: 'whatsapp',
     name: 'WhatsApp',
     icon: 'add-ic-call',
-    url: 'whatsapp://send?phone=', // 'https://wa.me/',
+    // TODO: Support having the country code in the contact's phone #
+    url: 'whatsapp://send?phone=1', // 'https://wa.me/',
     depPackage: 'com.whatsapp',
     screen: Screen.ContactList,
   },
@@ -356,8 +358,9 @@ export async function openSpotify() {
   if (data === null || data.favMusicGenre === '') {
     await Linking.openURL('spotify://');
   } else {
+    // TODO: filter down to playlists
     await Linking.openURL(
-      `spotify://search/${encodeURIComponent(data.favMusicGenre)}/playlists`,
+      `spotify://search/${encodeURIComponent(data.favMusicGenre)}`,
     );
   }
 }
@@ -628,8 +631,6 @@ async function pickVisualVoicemailApp(): Promise<string | undefined> {
   // https://developers.google.com/zero-touch/resources/manufacturer-names
   if (phoneInfo.manufacturer === 'google') {
     return 'com.google.android.dialer';
-  } else if (phoneInfo.manufacturer === 'samsung') {
-    return 'com.samsung.vvm';
   }
 
   // https://source.android.com/devices/tech/config/carrierid
@@ -650,6 +651,10 @@ async function pickVisualVoicemailApp(): Promise<string | undefined> {
     phoneInfo.carrier.startsWith('boost')
   ) {
     return 'com.dish.vvm';
+  }
+
+  if (phoneInfo.manufacturer === 'samsung') {
+    return 'com.samsung.vvm.se';
   }
 
   return undefined;
