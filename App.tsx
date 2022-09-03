@@ -67,6 +67,14 @@ const MONTHS = [
 ];
 const LOW_BATTERY = 0.15;
 const CALLS_LOOKBACK_MS = 1000 * 60 * 60 * 24 * 30; // 1 month
+const COLORS = {
+  blue: '#264653',
+  green: '#2a9d8f',
+  yellow: '#e9c46a',
+  orange: '#f4a261',
+  red: '#e76f51',
+  black: '#111111',
+};
 
 export enum Screen {
   Home = 'Home',
@@ -127,6 +135,7 @@ interface App {
   key: string;
   name: string;
   icon: string;
+  color: string;
   depPackage?: string; // Defaults to package if present.
   cbParams?: string[];
 
@@ -145,12 +154,14 @@ const APPS: App[] = [
     key: 'dial',
     name: 'Dialpad',
     icon: 'dialpad',
+    color: COLORS.blue,
     url: 'tel:',
   },
   {
     key: 'phone',
     name: 'Phone',
     icon: 'phone',
+    color: COLORS.green,
     callback: 'callPhone',
     cbParams: [],
     screen: Screen.ContactList,
@@ -159,18 +170,21 @@ const APPS: App[] = [
     key: 'texts',
     name: 'Text Msgs',
     icon: 'chat',
+    color: COLORS.orange,
     package: 'com.google.android.apps.messaging',
   },
   {
     key: 'voicemail',
     name: 'Voicemail',
     icon: 'voicemail',
+    color: COLORS.green,
     asyncCallback: 'openVoicemail',
   },
   {
     key: 'missed',
     name: 'Missed Calls',
     icon: 'phone-missed',
+    color: COLORS.red,
     callback: 'callPhone',
     cbParams: [],
     screen: Screen.CallLogList,
@@ -179,18 +193,21 @@ const APPS: App[] = [
     key: 'camera',
     name: 'Camera',
     icon: 'photo-camera',
+    color: COLORS.blue,
     callback: 'openCamera',
   },
   {
     key: 'photos',
     name: 'Photos',
     icon: 'photo',
+    color: COLORS.yellow,
     package: 'com.google.android.apps.photos',
   },
   {
     key: 'maps',
     name: 'Map Home',
     icon: 'map',
+    color: COLORS.green,
     asyncCallback: 'mapHome',
     // url: `geo:${HOME_GPS.lat},${HOME_GPS.lon}`,
     depPackage: 'com.google.android.apps.maps',
@@ -199,12 +216,14 @@ const APPS: App[] = [
     key: 'reminder',
     name: 'Reminders',
     icon: 'alarm',
+    color: COLORS.red,
     package: 'in.smsoft.justremind', // 'com.google.android.deskclock'
   },
   {
     key: 'weather',
     name: 'Weather',
     icon: 'wb-sunny',
+    color: COLORS.yellow,
     url: 'dynact://velour/weather/ProxyActivity',
     depPackage: 'com.google.android.googlequicksearchbox',
   },
@@ -212,12 +231,14 @@ const APPS: App[] = [
     key: 'emergency',
     name: 'Call for Help',
     icon: 'new-releases',
+    color: COLORS.red,
     asyncCallback: 'helpCallsAndTexts',
   },
   {
     key: 'magnifier',
     name: 'Magnifier & Flashlight',
     icon: 'saved-search',
+    color: COLORS.orange,
     asyncCallback: 'turnTorchOnAndMagnify',
   },
 ];
@@ -227,6 +248,7 @@ const EXTRA_APPS: App[] = [
     key: 'whatsapp',
     name: 'WhatsApp',
     icon: 'add-ic-call',
+    color: COLORS.blue,
     // TODO: Support having the country code in the contact's phone #
     url: 'whatsapp://send?phone=1', // 'https://wa.me/',
     depPackage: 'com.whatsapp',
@@ -236,6 +258,7 @@ const EXTRA_APPS: App[] = [
     key: 'uber',
     name: 'Taxi Home',
     icon: 'local-taxi',
+    color: COLORS.red,
     asyncCallback: 'uberHome',
     depPackage: 'com.ubercab',
   },
@@ -243,6 +266,7 @@ const EXTRA_APPS: App[] = [
     key: 'music',
     name: 'Music',
     icon: 'headset',
+    color: COLORS.yellow,
     asyncCallback: 'openSpotify',
     depPackage: 'com.spotify.music',
   },
@@ -250,54 +274,63 @@ const EXTRA_APPS: App[] = [
     key: 'calendar',
     name: 'Calendar',
     icon: 'calendar-today',
+    color: COLORS.orange,
     package: 'com.google.android.calendar',
   },
   {
     key: 'email',
     name: 'Email',
     icon: 'email',
+    color: COLORS.green,
     package: 'com.google.android.gm',
   },
   {
     key: 'calculator',
     name: 'Calculator',
     icon: 'calculate',
+    color: COLORS.blue,
     package: 'com.google.android.calculator',
   },
   {
     key: 'health',
     name: 'Health',
     icon: 'directions-run',
+    color: COLORS.yellow,
     package: 'com.google.android.apps.fitness',
   },
   {
     key: 'solitaire',
     name: 'Solitaire',
     icon: 'auto-awesome-motion',
+    color: COLORS.orange,
     package: 'com.potatojam.classic.solitaire.klondike',
   },
   {
-    key: 'fortune',
-    name: 'Wheel of Fortune',
-    icon: 'filter-tilt-shift',
-    package: 'com.scopely.wheeloffortune',
+    key: 'words',
+    name: 'Word Game',
+    icon: 'videogame-asset',
+    color: COLORS.green,
+    package: 'com.gsr.wordcross',
   },
   {
     key: 'news',
     name: 'News',
     icon: 'radio',
+    color: COLORS.red,
     package: 'org.npr.one',
   },
   {
     key: 'settings',
     name: 'Settings',
     icon: 'settings',
+    color: COLORS.blue,
     screen: Screen.Configure,
   },
   {
     key: 'book',
     name: 'Books',
     icon: 'menu-book',
+    color: COLORS.yellow,
     package: 'com.google.android.apps.books',
   },
 ];
@@ -307,24 +340,28 @@ const BACKGROUND_APPS: App[] = [
     key: 'launcher',
     name: 'Default Launcher',
     icon: 'apps',
+    color: COLORS.black,
     package: LAUNCHER,
   },
   {
     key: 'settings',
     name: 'Settings',
     icon: 'settings',
+    color: COLORS.black,
     package: SETTINGS,
   },
   {
     key: 'locator',
     name: 'Find My Device',
     icon: 'location-searching',
+    color: COLORS.black,
     package: 'com.google.android.apps.adm',
   },
   {
     key: 'magnifier',
     name: 'Magnifier & Flashlight',
     icon: 'search',
+    color: COLORS.black,
     package: MAGNIFIER,
   },
 ];
@@ -522,6 +559,7 @@ const CallWidget = (props: {call: CallLog; app: App; navigation: NavProp}) => {
   const tailwind = useTailwind();
   // deep copy
   const app = JSON.parse(JSON.stringify(props.app));
+  app.color = COLORS.red;
   app.screen = undefined;
   const tel = props.call.phoneNumber.replace(/[^0-9]/g, '');
   if (app.url) {
@@ -549,7 +587,7 @@ const CallWidget = (props: {call: CallLog; app: App; navigation: NavProp}) => {
         onPress={async () => await handleApp(app, props.navigation)}>
         <View style={tailwind('flex-row')}>
           <View style={tailwind('w-1/6')}>
-            <Icon name={app.icon} size={40} color="#900" />
+            <Icon name={app.icon} size={40} color={app.color} />
           </View>
           <View style={tailwind('w-5/6')}>
             <Text style={tailwind('text-xl font-bold text-black')}>
@@ -710,6 +748,7 @@ const Contact = (props: {
   const tailwind = useTailwind();
   // deep copy
   const app = JSON.parse(JSON.stringify(props.app));
+  app.color = COLORS.green;
   app.screen = undefined;
   const tel = props.contact.phoneNumbers[0].number.replace(/[^0-9]/g, '');
   if (app.url) {
@@ -718,9 +757,9 @@ const Contact = (props: {
   if (app.cbParams !== undefined) {
     app.cbParams.push(tel);
   }
-  app.name = `${props.contact.givenName} ${props.contact.familyName}${
-    props.contact.isStarred ? '    ⭐' : ''
-  }`;
+  app.name = `${props.contact.isStarred ? '⭐  ' : ''}${
+    props.contact.givenName
+  } ${props.contact.familyName}`;
   // app.key = `${app.key}-${props.contact.givenName}-${props.contact.familyName}`;
   app.icon = 'person';
 
@@ -734,7 +773,7 @@ const Contact = (props: {
         onPress={async () => await handleApp(app, props.navigation)}>
         <View style={tailwind('flex-row')}>
           <View style={tailwind('w-1/5')}>
-            <Icon name={app.icon} size={40} color="#900" />
+            <Icon name={app.icon} size={40} color={app.color} />
           </View>
           <View style={tailwind('w-4/5')}>
             <Text style={tailwind('text-2xl font-bold text-black')}>
@@ -878,6 +917,7 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
             key: 'voicemail',
             name: 'Voicemail',
             icon: 'voicemail',
+            color: COLORS.green,
             package: vmPkg,
           };
           allApps.push(vmApp);
@@ -1224,7 +1264,7 @@ const AppOption = (props: {app: App; navigation: NavProp}) => {
           style={tailwind(
             'rounded-md m-1 items-center border border-indigo-600 bg-white',
           )}>
-          <Icon name={props.app.icon} size={90} color="#465c80" />
+          <Icon name={props.app.icon} size={90} color={props.app.color} />
           <Text style={tailwind('text-xl text-center font-bold text-black')}>
             {props.app.name}
           </Text>
@@ -1249,10 +1289,14 @@ function getDateTime() {
     hrs = 12;
   }
   const meridiem = now.getHours() < 12 ? 'AM' : 'PM';
+  let min = `${now.getMinutes()}`;
+  if (min.length === 1) {
+    min = `0${min}`;
+  }
 
   return `${WEEKDAYS[now.getDay()]} ${
     MONTHS[now.getMonth()]
-  } ${now.getDate()}, ${now.getFullYear()}\n${hrs}:${now.getMinutes()} ${meridiem}`;
+  } ${now.getDate()}, ${now.getFullYear()}\n${hrs}:${min} ${meridiem}`;
 }
 
 // https://stackoverflow.com/q/41294576

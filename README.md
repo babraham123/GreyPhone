@@ -1,6 +1,13 @@
-# GreyPhone
+# Basic Phone
 
-BaldPhone is a senior-focused Android platform replacing the phone's interface with a bigger, simpler and friendlier one.
+Basic Phone replaces your home screen with a simplified set of actions. Large icons open directly to the most useful part of the given app, skipping confusing UIs and unnecessary button clicks. Basic Phone was designed so that the elderly, the visually impaired or young children can get the most out of their devices.
 
-The platform contains large and accessible enhancements for the home screen launcher, keyboard, contacts and phone applications, voice assistant and more. It also includes an easy to use pill reminder for keeping track of prescriptions as well as a full video tutorial section.
+In one click you can:
+- Call friends in your contact list
+- Get driving directions to your home
+- Order an Uber back to your home
+- Search for your favorite music
+- Listen to the news
+- Add more!
 
+On first load, please install and configure all of that apps that you wish to use. We selected apps that are simple, useful and free. Basic Phone itself is completely free and doesn't collect any data :)

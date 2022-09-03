@@ -1,6 +1,6 @@
 GreyPhone
 
-Commands::
+Dev commands::
 npm run dev:tailwind
 npx react-native start
 npx react-native run-android
@@ -12,10 +12,14 @@ rm -rf android/app/src/main/assets/fonts
 
 
 Issues::
-
-
 Warning: Can't perform a React state update on an unmounted component. This is a no-op, but it indicates a memory leak in your application. To fix, cancel all subscriptions and asynchronous tasks in a useEffect cleanup function.
     in ContactPanel (at SceneView.tsx:132)
+
+
+References::
+https://reactnative.dev/docs/running-on-device
+https://play.google.com/console/about/guides/build-a-high-quality-app-or-game/
+https://oblador.github.io/react-native-vector-icons/
 
 
 Deep links::
@@ -39,7 +43,8 @@ Uber:
 uber://?action=setPickup&pickup=my_location&dropoff%5Bformatted_address%5D=Uber%20HQ%2C%20Market%20Street%2C%20San%20Francisco%2C%20CA%2C%20USA&dropoff%5Blatitude%5D=37.775231&dropoff%5Blongitude%5D=-122.417528
 
 
-Reminder apps::
+App Selection::
+Reminder apps:
 https://play.google.com/store/apps/details?id=com.ToDoReminder.gen
 https://play.google.com/store/apps/details?id=in.smsoft.justremind
 https://play.google.com/store/apps/details?id=com.arthurivanets.reminder
@@ -68,14 +73,17 @@ https://github.com/babel/babel/issues/14139
 voicemail
 https://stackoverflow.com/questions/11744063/using-voicemailcontract-gives-permissions-error
 
-Flatlist
+
+React Components::
+Flatlist:
 https://reactnative.dev/docs/optimizing-flatlist-configuration
 https://www.npmjs.com/package/react-native-sectionlist-contacts
 
 state pool, global hooks:
 https://yezyilomo.github.io/state-pool/docs/introduction/getting_started/
 
-different git accts:
+
+Different git accts::
 https://stackoverflow.com/questions/4220416/can-i-specify-multiple-users-for-myself-in-gitconfig
 https://www.freecodecamp.org/news/how-to-handle-multiple-git-configurations-in-one-machine/
 PAT:
