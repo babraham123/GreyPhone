@@ -1,4 +1,4 @@
-GreyPhone
+Basic Phone
 
 Dev commands::
 npm run dev:tailwind
@@ -20,6 +20,8 @@ References::
 https://reactnative.dev/docs/running-on-device
 https://play.google.com/console/about/guides/build-a-high-quality-app-or-game/
 https://oblador.github.io/react-native-vector-icons/
+https://coolors.co/palettes/trending
+https://github.com/react-native-device-info/react-native-device-info
 
 
 Deep links::

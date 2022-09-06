@@ -65,7 +65,6 @@ const MONTHS = [
   'Nov',
   'Dec',
 ];
-const LOW_BATTERY = 0.15;
 const CALLS_LOOKBACK_MS = 1000 * 60 * 60 * 24 * 30; // 1 month
 const COLORS = {
   blue: '#264653',
@@ -73,7 +72,8 @@ const COLORS = {
   yellow: '#e9c46a',
   orange: '#f4a261',
   red: '#e76f51',
-  black: '#111111',
+  grey: '#adb5bd',
+  black: '#283618',
 };
 
 export enum Screen {
@@ -130,6 +130,36 @@ const APP_DATA_DEFAULTS = {
   emerContact1: '',
 };
 let appDataCache: AppData | undefined;
+
+const LOW_BATTERY = 0.1;
+interface BatteryProp {
+  icon: string;
+  color: string;
+  minLevel: number;
+}
+// Order matters
+const BATTERY_PROPS: {[key: string]: BatteryProp} = {
+  charging: {
+    icon: 'battery-charging-full',
+    color: '#06d6a0',
+    minLevel: 0,
+  },
+  full: {
+    icon: 'battery-full',
+    color: '#06d6a0',
+    minLevel: 0.5,
+  },
+  medium: {
+    icon: 'battery-std',
+    color: '#ffd166',
+    minLevel: 0.15,
+  },
+  low: {
+    icon: 'battery-alert',
+    color: '#ef476f',
+    minLevel: 0,
+  },
+};
 
 interface App {
   key: string;
@@ -872,6 +902,12 @@ async function getContactIdByName(name: string): Promise<string> {
   throw new Error(`${cnts.length} contacts with this name were found: ${name}`);
 }
 
+function openApp(pkg: string) {
+  return async () => {
+    await SendIntentAndroid.openApp(pkg, {});
+  };
+}
+
 const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
   const tailwind = useTailwind();
 
@@ -977,12 +1013,6 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
     navigation.goBack();
   };
 
-  const openApp = (pkg: string) => {
-    return async () => {
-      await SendIntentAndroid.openApp(pkg, {});
-    };
-  };
-
   const installApp = (pkg: string) => {
     return async () => {
       await Linking.openURL(PLAY_STORE_URL + pkg);
@@ -1003,9 +1033,6 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
       <Header text={'Phone options'} />
       <View style={optionStyle}>
         <Button title="Phone Settings" onPress={openApp(SETTINGS)} />
-      </View>
-      <View style={optionStyle}>
-        <Button title="Default Launcher" onPress={openApp(LAUNCHER)} />
       </View>
       {apps.length > 0 && (
         <View>
@@ -1299,6 +1326,61 @@ function getDateTime() {
   } ${now.getDate()}, ${now.getFullYear()}\n${hrs}:${min} ${meridiem}`;
 }
 
+const Battery = () => {
+  const tailwind = useTailwind();
+  const [level, setLevel] = useState(1.0);
+  const [props, setProps] = useState(BATTERY_PROPS.full);
+  useEffect(() => {
+    let checkTimer = setInterval(() => {
+      DeviceInfo.getPowerState()
+        .then(power => {
+          //   batteryLevel: 0.759999,
+          //   batteryState: unplugged, charging, full, unknown
+          //   lowPowerMode: false,
+          if (!power.batteryLevel) {
+            return;
+          }
+          if (
+            power.batteryState === 'unplugged' &&
+            level >= LOW_BATTERY &&
+            power.batteryLevel < LOW_BATTERY
+          ) {
+            const lvl = Math.round(power.batteryLevel * 100);
+            Alert.alert(`Warning, battery is low (${lvl}%). Please charge!`);
+          }
+
+          setLevel(power.batteryLevel);
+          if (power.batteryState === 'charging') {
+            setProps(BATTERY_PROPS.charging);
+          } else if (power.batteryLevel >= BATTERY_PROPS.full.minLevel) {
+            setProps(BATTERY_PROPS.full);
+          } else if (power.batteryLevel >= BATTERY_PROPS.medium.minLevel) {
+            setProps(BATTERY_PROPS.medium);
+          } else {
+            setProps(BATTERY_PROPS.low);
+          }
+        })
+        .catch(console.warn);
+    }, 60 * 1000);
+
+    return () => clearInterval(checkTimer);
+  }, [level, props]);
+
+  return (
+    <View style={tailwind('flex flex-row gap-0')}>
+      <Icon
+        name={props.icon}
+        size={60}
+        color={props.color}
+        style={tailwind('rotate270')}
+      />
+      <Text style={tailwind('text-2xl font-bold text-black')}>
+        {`${Math.round(level * 100)}%`}
+      </Text>
+    </View>
+  );
+};
+
 // https://stackoverflow.com/q/41294576
 const Clock = () => {
   const [dt, setDt] = useState(getDateTime());
@@ -1331,12 +1413,22 @@ const AppPanel = ({navigation, route}: HomeProps | ExtrasProps) => {
   }, [navigation, route]);
 
   return (
-    <View>
+    <View style={tailwind('grow')}>
       <Clock />
       <View style={tailwind('flex flex-row flex-wrap')}>
         {route.params.apps.map(app => {
           return <AppOption key={app.key} app={app} navigation={navigation} />;
         })}
+      </View>
+      <View style={tailwind('absolute bottom-0 left-0')}>
+        <Battery />
+      </View>
+      <View style={tailwind('absolute bottom-0 right-0')}>
+        <Button
+          title="Default Home Screen"
+          color={COLORS.grey}
+          onPress={openApp(LAUNCHER)}
+        />
       </View>
     </View>
   );
@@ -1371,30 +1463,6 @@ function HomeTabScreen() {
 }
 
 const App = () => {
-  useEffect(() => {
-    DeviceInfo.getPowerState()
-      .then(power => {
-        // {
-        //   batteryLevel: 0.759999,
-        //   batteryState: 'unplugged',
-        //   lowPowerMode: false,
-        // }
-        if (
-          power.batteryState === 'unplugged' &&
-          power.batteryLevel &&
-          power.batteryLevel < LOW_BATTERY
-        ) {
-          const msg =
-            power.batteryLevel >= power.batteryLevel / 2
-              ? 'Please charge phone.'
-              : 'Charge phone immediately!';
-          const lvl = Math.round(power.batteryLevel * 100);
-          Alert.alert(`Warning, battery is low (${lvl}%). ${msg}`);
-        }
-      })
-      .catch(console.warn);
-  }, []);
-
   useEffect(() => {
     // Turn off flashlight if it's on
     turnTorchOff().catch(console.log);

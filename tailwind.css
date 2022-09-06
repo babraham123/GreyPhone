@@ -14,6 +14,18 @@
   position: relative
 }
 
+.bottom-0 {
+  bottom: 0px
+}
+
+.left-0 {
+  left: 0px
+}
+
+.right-0 {
+  right: 0px
+}
+
 .m-1 {
   margin: 0.25rem
 }
@@ -92,6 +104,10 @@
 
 .flex-1 {
   flex: 1 1 0%
+}
+
+.grow {
+  flex-grow: 1
 }
 
 .flex-row {
@@ -190,4 +206,8 @@
 .text-red-600 {
   --tw-text-opacity: 1;
   color: rgb(220 38 38 / var(--tw-text-opacity))
+}
+
+.rotate270 {
+  transform: rotate(270deg)
 }

@@ -1,8 +1,8 @@
 # Basic Phone
 
-Basic Phone replaces your home screen with a simplified set of actions. Large icons open directly to the most useful part of the given app, skipping confusing UIs and unnecessary button clicks. Basic Phone was designed so that the elderly, the visually impaired or young children can get the most out of their devices.
+Basic Phone replaces your home screen with a simplified set of actions. Large icons open directly to the most useful part of the given app, skipping confusing UIs and unnecessary button clicks. Basic Phone was designed so that the elderly, the visually impaired and young children can get the most out of their devices.
 
-In one click you can:
+#### In one click you can
 - Call friends in your contact list
 - Get driving directions to your home
 - Order an Uber back to your home
