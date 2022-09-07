@@ -1,0 +1,24 @@
+diff --git a/node_modules/react-native-sms-android/android/build.gradle b/node_modules/react-native-sms-android/android/build.gradle
+index 102a592..edb275b 100644
+--- a/node_modules/react-native-sms-android/android/build.gradle
++++ b/node_modules/react-native-sms-android/android/build.gradle
+@@ -30,5 +30,5 @@ repositories {
+ }
+ 
+ dependencies {
+-    compile 'com.facebook.react:react-native:0.19.+'
++    implementation 'com.facebook.react:react-native:+'
+ }
+diff --git a/node_modules/react-native-sms-android/android/src/main/java/com/rhaker/reactnativesmsandroid/RNSmsAndroidPackage.java b/node_modules/react-native-sms-android/android/src/main/java/com/rhaker/reactnativesmsandroid/RNSmsAndroidPackage.java
+index 5f246a9..7999422 100644
+--- a/node_modules/react-native-sms-android/android/src/main/java/com/rhaker/reactnativesmsandroid/RNSmsAndroidPackage.java
++++ b/node_modules/react-native-sms-android/android/src/main/java/com/rhaker/reactnativesmsandroid/RNSmsAndroidPackage.java
+@@ -19,7 +19,7 @@ public class RNSmsAndroidPackage implements ReactPackage {
+       return Arrays.<NativeModule>asList(mModuleInstance);
+     }
+ 
+-    @Override
++    // Deprecated
+     public List<Class<? extends JavaScriptModule>> createJSModules() {
+         return Collections.emptyList();
+     }

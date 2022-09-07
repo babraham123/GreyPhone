@@ -15,6 +15,11 @@ Issues::
 Warning: Can't perform a React state update on an unmounted component. This is a no-op, but it indicates a memory leak in your application. To fix, cancel all subscriptions and asynchronous tasks in a useEffect cleanup function.
     in ContactPanel (at SceneView.tsx:132)
 
+3rd party build.gradle upgrades with patch-package
+compile -> implementation
+vi npm_modules/patch-package/dist/makePatch.js:50
+>> fs_extra_1.writeFileSync(tmpRepoPackageJsonPath, JSON.stringify({"dependencies":{"react-native-torch":"github:oguennec/react-native-torch#baf88842ae02345f0cca9e45bcd85aef8b6dbfc8"},"resolutions":{}}));
+https://github.com/ds300/patch-package/issues/139
 
 References::
 https://reactnative.dev/docs/running-on-device
