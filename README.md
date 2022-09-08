@@ -10,4 +10,4 @@ Basic Phone replaces your home screen with a simplified set of actions. Large ic
 - Listen to the news
 - Add more!
 
-On first load, please install and configure all of that apps that you wish to use. We selected apps that are simple, useful and free. Basic Phone itself is completely free and doesn't collect any data :)
+On first load, please install and configure all of that apps that you wish to use. We selected apps that are simple, useful and free or ad supported. Basic Phone itself is completely free! You can optionally customize the app with some personal details (home address, emergency contact and music preference) and the data is stored locally on device, never uploaded.
