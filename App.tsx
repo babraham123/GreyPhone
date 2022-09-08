@@ -402,8 +402,7 @@ export function openCamera() {
 
 export async function mapHome() {
   const data = await getAppData();
-  if (data === null) {
-    alertAndWarn('Home address is not set.');
+  if (data === null || !data.homeAddress) {
     SendIntentAndroid.openMaps('');
   } else {
     SendIntentAndroid.openMapsWithRoute(data.homeAddress, 'd');
@@ -412,8 +411,7 @@ export async function mapHome() {
 
 export async function uberHome() {
   const data = await getAppData();
-  if (data === null || data.homeAddress === '') {
-    alertAndWarn('Home address is not set.');
+  if (data === null || !data.homeAddress) {
     await Linking.openURL('uber://');
   } else {
     await Linking.openURL(UBER_URL_ROOT + encodeURIComponent(data.homeAddress));
@@ -422,7 +420,7 @@ export async function uberHome() {
 
 export async function openSpotify() {
   const data = await getAppData();
-  if (data === null || data.favMusicGenre === '') {
+  if (data === null || !data.favMusicGenre) {
     await Linking.openURL('spotify://');
   } else {
     // TODO: filter down to playlists
@@ -1013,6 +1011,25 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
     navigation.goBack();
   };
 
+  const onSkip = async () => {
+    setErrTxt('');
+    const data: AppData = {
+      emerContact1: '',
+      homeAddress: '',
+      favMusicGenre: '',
+    };
+    try {
+      const jsonVal = JSON.stringify(data);
+      await AsyncStorage.setItem(APP_DATA_LABEL, jsonVal);
+    } catch (err) {
+      console.warn(err);
+      setErrTxt('Skip failed, try again');
+      return;
+    }
+    appDataCache = {...data};
+    navigation.goBack();
+  };
+
   const installApp = (pkg: string) => {
     return async () => {
       await Linking.openURL(PLAY_STORE_URL + pkg);
@@ -1118,6 +1135,8 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
       <Text style={errStyle}>{errTxt}</Text>
       <Button title="Submit" onPress={handleSubmit(onSubmit)} />
       <View style={tailwind('h-5')} />
+      <Button title="Skip for now" onPress={onSkip} />
+      <View style={tailwind('h-5')} />
     </KeyboardAwareScrollView>
   );
 };
@@ -1128,7 +1147,7 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
 
 async function getEmergencyContacts(): Promise<Contacts.Contact[]> {
   const data = await getAppData();
-  if (data === null) {
+  if (data === null || !data.emerContact1) {
     return [];
   }
   const ids: string[] = [data.emerContact1];
