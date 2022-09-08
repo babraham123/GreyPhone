@@ -27,6 +27,9 @@ vi npm_modules/patch-package/dist/makePatch.js:50
 >> fs_extra_1.writeFileSync(tmpRepoPackageJsonPath, JSON.stringify({"dependencies":{"react-native-torch":"github:oguennec/react-native-torch#baf88842ae02345f0cca9e45bcd85aef8b6dbfc8"},"resolutions":{}}));
 https://github.com/ds300/patch-package/issues/139
 
+Update the versionCode in android/app/build.gradle
+
+
 References::
 https://reactnative.dev/docs/running-on-device
 https://play.google.com/console/about/guides/build-a-high-quality-app-or-game/

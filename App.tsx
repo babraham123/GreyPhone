@@ -212,7 +212,7 @@ const APPS: App[] = [
   },
   {
     key: 'missed',
-    name: 'Missed Calls',
+    name: 'Missed',
     icon: 'phone-missed',
     color: COLORS.red,
     callback: 'callPhone',
@@ -259,14 +259,14 @@ const APPS: App[] = [
   },
   {
     key: 'emergency',
-    name: 'Call for Help',
+    name: 'Help!',
     icon: 'new-releases',
     color: COLORS.red,
     asyncCallback: 'helpCallsAndTexts',
   },
   {
     key: 'magnifier',
-    name: 'Magnifier & Flashlight',
+    name: 'Magnifier',
     icon: 'saved-search',
     color: COLORS.orange,
     asyncCallback: 'turnTorchOnAndMagnify',
@@ -368,7 +368,7 @@ const EXTRA_APPS: App[] = [
 const BACKGROUND_APPS: App[] = [
   {
     key: 'launcher',
-    name: 'Default Launcher',
+    name: 'Original Launcher',
     icon: 'apps',
     color: COLORS.black,
     package: LAUNCHER,
@@ -438,7 +438,9 @@ export async function turnTorchOnAndMagnify() {
   if (cameraAllowed) {
     await Torch.switchState(true);
   }
-  await SendIntentAndroid.openApp(MAGNIFIER, {});
+  if (await checkInstalled(MAGNIFIER)) {
+    await SendIntentAndroid.openApp(MAGNIFIER, {});
+  }
 }
 
 async function turnTorchOff() {
@@ -902,7 +904,9 @@ async function getContactIdByName(name: string): Promise<string> {
 
 function openApp(pkg: string) {
   return async () => {
-    await SendIntentAndroid.openApp(pkg, {});
+    if (await checkInstalled(pkg)) {
+      await SendIntentAndroid.openApp(pkg, {});
+    }
   };
 }
 
@@ -1444,7 +1448,7 @@ const AppPanel = ({navigation, route}: HomeProps | ExtrasProps) => {
       </View>
       <View style={tailwind('absolute bottom-0 right-0')}>
         <Button
-          title="Default Home Screen"
+          title="Original Home Screen"
           color={COLORS.grey}
           onPress={openApp(LAUNCHER)}
         />
