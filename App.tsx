@@ -447,7 +447,7 @@ async function turnTorchOff() {
   try {
     const isTorchOn = await Torch.getStatus();
     if (isTorchOn) {
-      await Torch.switchState(true);
+      await Torch.switchState(false);
     }
   } catch (e) {}
 }
@@ -516,8 +516,12 @@ function getTime(date: Date): string {
   if (hrs === 0) {
     hrs = 12;
   }
+  let mins = `${date.getMinutes()}`;
+  if (mins.length === 1) {
+    mins = `0${mins}`;
+  }
   const meridiem = date.getHours() < 12 ? 'a' : 'p';
-  return `${hrs}:${date.getMinutes()}${meridiem}`;
+  return `${hrs}:${mins}${meridiem}`;
 }
 
 async function getMissedCalls(): Promise<CallLog[]> {
@@ -578,6 +582,9 @@ async function getMissedCalls(): Promise<CallLog[]> {
         lastCall.duration = calls[i].duration; // store max duration
       }
     } else {
+      if (!calls[i].name && !calls[i].phoneNumber) {
+        continue;
+      }
       calls[i].rawType = 1;
       mergedCalls.push(processCall(calls[i]));
     }
@@ -601,10 +608,13 @@ const CallWidget = (props: {call: CallLog; app: App; navigation: NavProp}) => {
 
   const name = props.call.name || props.call.phoneNumber;
   const dups = props.call.rawType > 1 ? ` (${props.call.rawType})` : '';
-  const duration = `${Math.floor(props.call.duration / 60)}:${
-    props.call.duration % 60
-  }`;
-  app.name = `${name}${dups}\n${props.call.dateTime}, ${duration}`;
+  let duration = '';
+  if (props.call.duration > 0) {
+    duration = `, ${Math.floor(props.call.duration / 60)}:${
+      props.call.duration % 60
+    }`;
+  }
+  app.name = `${name}${dups}\n${props.call.dateTime}${duration}`;
   app.icon = 'call-missed';
 
   return (
@@ -857,6 +867,7 @@ const ContactPanel = ({navigation, route}: ContactsProps) => {
         keyExtractor={keyExtractor}
         maxToRenderPerBatch={25}
         updateCellsBatchingPeriod={100}
+        removeClippedSubviews={true}
       />
     </View>
   );
