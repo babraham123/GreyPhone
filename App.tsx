@@ -1354,7 +1354,7 @@ const Battery = () => {
   const [level, setLevel] = useState(1.0);
   const [props, setProps] = useState(BATTERY_PROPS.full);
   useEffect(() => {
-    let checkTimer = setInterval(() => {
+    const updateBatteryStatus = () => {
       DeviceInfo.getPowerState()
         .then(power => {
           //   batteryLevel: 0.759999,
@@ -1384,8 +1384,10 @@ const Battery = () => {
           }
         })
         .catch(console.warn);
-    }, 60 * 1000);
+    };
 
+    updateBatteryStatus();
+    let checkTimer = setInterval(updateBatteryStatus, 5 * 1000);
     return () => clearInterval(checkTimer);
   }, [level, props]);
 
@@ -1410,7 +1412,7 @@ const Clock = () => {
   useEffect(() => {
     let secTimer = setInterval(() => {
       setDt(getDateTime());
-    }, 5000);
+    }, 5 * 1000);
 
     return () => clearInterval(secTimer);
   }, [dt]);
