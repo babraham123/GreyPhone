@@ -39,6 +39,7 @@ import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scrollview';
 import DeviceInfo from 'react-native-device-info';
 
 const DEBUG = false;
+const ALL_CONTACTS = false;
 
 LogBox.ignoreLogs(['new NativeEventEmitter']);
 LogBox.ignoreAllLogs();
@@ -67,7 +68,8 @@ const MONTHS = [
 ];
 const CALLS_LOOKBACK_MS = 1000 * 60 * 60 * 24 * 30; // 1 month
 const COLORS = {
-  blue: '#264653',
+  blue: '#219ebc',
+  dark_blue: '#264653',
   green: '#2a9d8f',
   yellow: '#e9c46a',
   orange: '#f4a261',
@@ -184,7 +186,7 @@ const APPS: App[] = [
     key: 'dial',
     name: 'Dialpad',
     icon: 'dialpad',
-    color: COLORS.blue,
+    color: COLORS.dark_blue,
     url: 'tel:',
   },
   {
@@ -223,7 +225,7 @@ const APPS: App[] = [
     key: 'camera',
     name: 'Camera',
     icon: 'photo-camera',
-    color: COLORS.blue,
+    color: COLORS.dark_blue,
     callback: 'openCamera',
   },
   {
@@ -278,7 +280,7 @@ const EXTRA_APPS: App[] = [
     key: 'whatsapp',
     name: 'WhatsApp',
     icon: 'add-ic-call',
-    color: COLORS.blue,
+    color: COLORS.dark_blue,
     // TODO: Support having the country code in the contact's phone #
     url: 'whatsapp://send?phone=1', // 'https://wa.me/',
     depPackage: 'com.whatsapp',
@@ -318,7 +320,7 @@ const EXTRA_APPS: App[] = [
     key: 'calculator',
     name: 'Calculator',
     icon: 'calculate',
-    color: COLORS.blue,
+    color: COLORS.dark_blue,
     package: 'com.google.android.calculator',
   },
   {
@@ -353,7 +355,7 @@ const EXTRA_APPS: App[] = [
     key: 'settings',
     name: 'Settings',
     icon: 'settings',
-    color: COLORS.blue,
+    color: COLORS.dark_blue,
     screen: Screen.Configure,
   },
   {
@@ -762,15 +764,17 @@ async function getContacts(): Promise<Contacts.Contact[]> {
     if (!contactsCache) {
       contactsCache = [];
     }
-    contactsCache.sort((a, b) => {
-      if (a.isStarred && !b.isStarred) {
-        return -1;
-      } else if (!a.isStarred && b.isStarred) {
-        return 1;
-      } else {
-        return a.givenName > b.givenName ? 1 : -1;
-      }
-    });
+    contactsCache = contactsCache
+      .filter(c => ALL_CONTACTS || c.isStarred)
+      .sort((a, b) => {
+        if (a.isStarred && !b.isStarred) {
+          return -1;
+        } else if (!a.isStarred && b.isStarred) {
+          return 1;
+        } else {
+          return a.givenName > b.givenName ? 1 : -1;
+        }
+      });
     console.log(`${contactsCache.length} contacts retrieved.`);
   } catch (err) {
     console.warn(err);
@@ -857,6 +861,12 @@ const ContactPanel = ({navigation, route}: ContactsProps) => {
     return item?.recordID?.toString() || idx.toString();
   };
 
+  function pickAndCallSync() {
+    return async () => {
+      await pickAndCall();
+    };
+  }
+
   // itemHeight={40}
   return (
     <View style={tailwind('flex-1 bg-white')}>
@@ -865,10 +875,20 @@ const ContactPanel = ({navigation, route}: ContactsProps) => {
         data={contacts}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        maxToRenderPerBatch={25}
-        updateCellsBatchingPeriod={100}
-        removeClippedSubviews={true}
+        // maxToRenderPerBatch={25}
+        // updateCellsBatchingPeriod={100}
       />
+      {!ALL_CONTACTS ? (
+        <View>
+          <View style={tailwind('h-5')} />
+          <Button
+            title="More"
+            onPress={pickAndCallSync()}
+            color={COLORS.blue}
+          />
+          <View style={tailwind('h-5')} />
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -1064,7 +1084,11 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
       }}>
       <Header text={'Phone options'} />
       <View style={optionStyle}>
-        <Button title="Phone Settings" onPress={openApp(SETTINGS)} />
+        <Button
+          title="Phone Settings"
+          onPress={openApp(SETTINGS)}
+          color={COLORS.blue}
+        />
       </View>
       {apps.length > 0 && (
         <View>
@@ -1077,6 +1101,7 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
                     key={app.key}
                     title={app.name}
                     onPress={installApp(app.package ?? app.depPackage ?? '')}
+                    color={COLORS.orange}
                   />
                 </View>
               );
@@ -1148,9 +1173,13 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
         />
       </View>
       <Text style={errStyle}>{errTxt}</Text>
-      <Button title="Submit" onPress={handleSubmit(onSubmit)} />
+      <Button
+        title="Submit"
+        onPress={handleSubmit(onSubmit)}
+        color={COLORS.green}
+      />
       <View style={tailwind('h-5')} />
-      <Button title="Skip for now" onPress={onSkip} />
+      <Button title="Skip for now" onPress={onSkip} color={COLORS.yellow} />
       <View style={tailwind('h-5')} />
     </KeyboardAwareScrollView>
   );
