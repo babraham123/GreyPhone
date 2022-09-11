@@ -40,9 +40,10 @@ import DeviceInfo from 'react-native-device-info';
 
 const DEBUG = false;
 const ALL_CONTACTS = false;
-
-LogBox.ignoreLogs(['new NativeEventEmitter']);
-LogBox.ignoreAllLogs();
+if (!DEBUG) {
+  LogBox.ignoreLogs(['new NativeEventEmitter']);
+  LogBox.ignoreAllLogs();
+}
 
 const PLAY_STORE_URL = 'market://launch?id=';
 const UBER_URL_ROOT =
@@ -650,7 +651,8 @@ const CallLogPanel = ({navigation, route}: CallLogProps) => {
     getMissedCalls()
       .then(calls => setMissedCalls(calls))
       .catch(console.warn);
-  }, [missedCalls]);
+    // Only run on first render
+  }, []);
 
   const renderItem = (props: {item: CallLog}) => (
     <CallWidget
@@ -764,17 +766,15 @@ async function getContacts(): Promise<Contacts.Contact[]> {
     if (!contactsCache) {
       contactsCache = [];
     }
-    contactsCache = contactsCache
-      .filter(c => ALL_CONTACTS || c.isStarred)
-      .sort((a, b) => {
-        if (a.isStarred && !b.isStarred) {
-          return -1;
-        } else if (!a.isStarred && b.isStarred) {
-          return 1;
-        } else {
-          return a.givenName > b.givenName ? 1 : -1;
-        }
-      });
+    contactsCache.sort((a, b) => {
+      if (a.isStarred && !b.isStarred) {
+        return -1;
+      } else if (!a.isStarred && b.isStarred) {
+        return 1;
+      } else {
+        return a.givenName > b.givenName ? 1 : -1;
+      }
+    });
     console.log(`${contactsCache.length} contacts retrieved.`);
   } catch (err) {
     console.warn(err);
@@ -804,7 +804,7 @@ const Contact = (props: {
   app.name = `${props.contact.isStarred ? '⭐  ' : ''}${
     props.contact.givenName
   } ${props.contact.familyName}`;
-  // app.key = `${app.key}-${props.contact.givenName}-${props.contact.familyName}`;
+  // app.key = tel;
   app.icon = 'person';
 
   return (
@@ -840,6 +840,7 @@ const ContactPanel = ({navigation, route}: ContactsProps) => {
         setContacts(
           cnts.filter(
             cnt =>
+              (ALL_CONTACTS || cnt.isStarred) &&
               cnt.phoneNumbers.length > 0 &&
               cnt.phoneNumbers[0].number &&
               cnt.givenName.length > 0 &&
@@ -848,7 +849,8 @@ const ContactPanel = ({navigation, route}: ContactsProps) => {
         );
       })
       .catch(console.warn);
-  }, [contacts]);
+    // Only run on first render
+  }, []);
 
   const renderItem = (props: {item: Contacts.Contact}) => (
     <Contact
@@ -861,15 +863,9 @@ const ContactPanel = ({navigation, route}: ContactsProps) => {
     return item?.recordID?.toString() || idx.toString();
   };
 
-  function pickAndCallSync() {
-    return async () => {
-      await pickAndCall();
-    };
-  }
-
   // itemHeight={40}
   return (
-    <View style={tailwind('flex-1 bg-white')}>
+    <View style={tailwind('flex bg-white')}>
       <Header text={route.params.app.name} />
       <FlatList
         data={contacts}
@@ -881,11 +877,17 @@ const ContactPanel = ({navigation, route}: ContactsProps) => {
       {!ALL_CONTACTS ? (
         <View>
           <View style={tailwind('h-5')} />
-          <Button
-            title="More"
-            onPress={pickAndCallSync()}
-            color={COLORS.blue}
-          />
+          <View style={tailwind('flex-row')}>
+            <View style={tailwind('w-1/6')} />
+            <TouchableNativeFeedback onPress={async () => await pickAndCall()}>
+              <View style={tailwind('w-2/3 h-12 bg-custom-blue')}>
+                <Text
+                  style={tailwind('text-2xl font-bold text-white text-center')}>
+                  {'More contacts'}
+                </Text>
+              </View>
+            </TouchableNativeFeedback>
+          </View>
           <View style={tailwind('h-5')} />
         </View>
       ) : null}
@@ -972,6 +974,7 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
         );
       })
       .catch(console.warn);
+    // Only run on first render
   }, []);
 
   useEffect(() => {
@@ -1003,7 +1006,8 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
           .catch(console.warn);
       })
       .catch(console.warn);
-  }, [apps]);
+    // Only run on first render
+  }, []);
 
   const {
     control,
@@ -1201,7 +1205,10 @@ async function getEmergencyContacts(): Promise<Contacts.Contact[]> {
 export async function helpCallsAndTexts() {
   const emerContacts = await getEmergencyContacts();
   if (emerContacts.length === 0) {
-    alertAndWarn('No emergency contacts have been added.');
+    console.warn('No emergency contacts have been added.');
+    Alert.alert(
+      'No emergency contacts have been added. Call 911 if necessary!',
+    );
     return;
   }
 
@@ -1429,10 +1436,12 @@ const Battery = () => {
     updateBatteryStatus();
     let checkTimer = setInterval(updateBatteryStatus, 5 * 1000);
     return () => clearInterval(checkTimer);
-  }, [level, props]);
+    // Only run on first render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <View style={tailwind('flex flex-row gap-0')}>
+    <View style={tailwind('flex flex-row')}>
       <Icon
         name={props.icon}
         size={60}
@@ -1455,7 +1464,8 @@ const Clock = () => {
     }, 5 * 1000);
 
     return () => clearInterval(secTimer);
-  }, [dt]);
+    // Only run on first render
+  }, []);
 
   return <Header text={dt} />;
 };
@@ -1475,7 +1485,9 @@ const AppPanel = ({navigation, route}: HomeProps | ExtrasProps) => {
         }
       })
       .catch(console.warn);
-  }, [navigation, route]);
+    // Only run on first render, deps shouldn't change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <View style={tailwind('grow')}>
@@ -1531,6 +1543,7 @@ const App = () => {
   useEffect(() => {
     // Turn off flashlight if it's on
     turnTorchOff().catch(console.log);
+    // Only run on first render
   }, []);
 
   return (
