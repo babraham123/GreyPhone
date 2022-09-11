@@ -399,6 +399,10 @@ const BACKGROUND_APPS: App[] = [
   },
 ];
 
+function removeNonDigits(num: string): string {
+  return num.replace(/[^0-9]/g, '');
+}
+
 export function openCamera() {
   SendIntentAndroid.openCamera();
 }
@@ -476,12 +480,12 @@ export async function pickAndCall() {
   console.log(
     `Selected phone number ${selectedPhone.number} from ${contact.name}`,
   );
-  const num = selectedPhone.number.replace(/[^0-9]/g, '');
+  const num = removeNonDigits(selectedPhone.number);
   RNImmediatePhoneCall.immediatePhoneCall(num);
 }
 
 export function callPhone(phoneNum: string) {
-  const num = phoneNum.replace(/[^0-9]/g, '');
+  const num = removeNonDigits(phoneNum);
   RNImmediatePhoneCall.immediatePhoneCall(num);
 }
 
@@ -601,7 +605,7 @@ const CallWidget = (props: {call: CallLog; app: App; navigation: NavProp}) => {
   const app = JSON.parse(JSON.stringify(props.app));
   app.color = COLORS.red;
   app.screen = undefined;
-  const tel = props.call.phoneNumber.replace(/[^0-9]/g, '');
+  const tel = removeNonDigits(props.call.phoneNumber);
   if (app.url) {
     app.url = app.url + tel;
   }
@@ -794,7 +798,7 @@ const Contact = (props: {
   const app = JSON.parse(JSON.stringify(props.app));
   app.color = COLORS.green;
   app.screen = undefined;
-  const tel = props.contact.phoneNumbers[0].number.replace(/[^0-9]/g, '');
+  const tel = removeNonDigits(props.contact.phoneNumbers[0].number);
   if (app.url) {
     app.url = app.url + tel;
   }
@@ -916,20 +920,14 @@ async function getAppData(): Promise<AppData | null> {
 }
 
 async function getContactIdByName(name: string): Promise<string> {
-  const parts = name.split(' ');
-  if (parts.length < 1) {
-    throw new Error('Invalid first name');
-  }
-  let cnts = (await getContacts()).filter(cnt => cnt.givenName === parts[0]);
-  if (cnts.length === 1) {
-    return cnts[0].recordID;
-  }
-
-  if (parts.length < 2) {
-    throw new Error('Last name needed for filtering');
-  }
-  cnts = (await getContacts()).filter(cnt => cnt.familyName === parts[1]);
-  if (cnts.length === 1) {
+  const cnts = (await getContacts()).filter(cnt => {
+    const cntName = [cnt.givenName, cnt.familyName]
+      .join(' ')
+      .toLowerCase()
+      .trim();
+    return cntName === name.toLowerCase();
+  });
+  if (cnts.length > 0) {
     return cnts[0].recordID;
   }
   throw new Error(`${cnts.length} contacts with this name were found: ${name}`);
@@ -1020,7 +1018,7 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
   const refs: any[] = [];
 
   const processInput = (input: string) => {
-    return input.replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+    return input.replace(/\s+/g, ' ').trim();
   };
 
   const onSubmit = async (data: AppData) => {
@@ -1214,7 +1212,7 @@ export async function helpCallsAndTexts() {
 
   for (const contact of emerContacts) {
     SmsAndroid.sms(
-      contact.phoneNumbers[0].number.replace(/[^0-9]/g, ''),
+      removeNonDigits(contact.phoneNumbers[0].number),
       'I have pressed the help button on my phone! Please call ASAP!',
       'sendDirect',
       (err: Error, msg: string) => {
@@ -1247,7 +1245,6 @@ export async function helpCallsAndTexts() {
     // );
 
     callPhone(contact.phoneNumbers[0].number);
-    console.log(`Called: ${contact.phoneNumbers[0].number}`);
     // await wait(60);
     // callDetector.dispose();
   }
