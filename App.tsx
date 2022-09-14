@@ -33,10 +33,12 @@ import CallLogs, {CallLog} from 'react-native-call-log';
 import RNImmediatePhoneCall from 'react-native-immediate-phone-call';
 import Torch from 'react-native-torch';
 import {useForm, Controller} from 'react-hook-form';
-import SmsAndroid from 'react-native-sms-android';
+// import CallDetectorManager from 'react-native-call-detection';
+// import SendSMS from 'react-native-sms';
 import {selectContactPhone} from 'react-native-select-contact';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scrollview';
 import DeviceInfo from 'react-native-device-info';
+import 'react-native-url-polyfill/auto';
 
 const DEBUG = false;
 const ALL_CONTACTS = false;
@@ -51,6 +53,7 @@ const UBER_URL_ROOT =
 const LAUNCHER = 'shubh.ruthless'; // 'com.google.android.apps.nexuslauncher'
 const SETTINGS = 'com.android.settings';
 const MAGNIFIER = 'com.app2u.magnifier';
+const INTERNET = 'com.android.chrome';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat'];
 const MONTHS = [
@@ -125,12 +128,14 @@ const APP_DATA_LABEL = '@AppData';
 interface AppData {
   homeAddress: string;
   favMusicGenre: string;
-  emerContact1: string;
+  homepageUrl: string;
+  // emerContact1: string;
 }
 const APP_DATA_DEFAULTS = {
   homeAddress: '',
   favMusicGenre: '',
-  emerContact1: '',
+  homepageUrl: '',
+  // emerContact1: '',
 };
 let appDataCache: AppData | undefined;
 
@@ -183,6 +188,29 @@ interface App {
 }
 
 const APPS: App[] = [
+  {
+    key: 'weather',
+    name: 'Weather',
+    icon: 'wb-sunny',
+    color: COLORS.yellow,
+    url: 'dynact://velour/weather/ProxyActivity',
+    depPackage: 'com.google.android.googlequicksearchbox',
+  },
+  {
+    key: 'uber',
+    name: 'Taxi Home',
+    icon: 'local-taxi',
+    color: COLORS.red,
+    asyncCallback: 'uberHome',
+    depPackage: 'com.ubercab',
+  },
+  {
+    key: 'magnifier',
+    name: 'Magnifier',
+    icon: 'saved-search',
+    color: COLORS.orange,
+    asyncCallback: 'turnTorchOnAndMagnify',
+  },
   {
     key: 'dial',
     name: 'Dialpad',
@@ -252,31 +280,30 @@ const APPS: App[] = [
     color: COLORS.red,
     package: 'in.smsoft.justremind', // 'com.google.android.deskclock'
   },
-  {
-    key: 'weather',
-    name: 'Weather',
-    icon: 'wb-sunny',
-    color: COLORS.yellow,
-    url: 'dynact://velour/weather/ProxyActivity',
-    depPackage: 'com.google.android.googlequicksearchbox',
-  },
-  {
-    key: 'emergency',
-    name: 'Help!',
-    icon: 'new-releases',
-    color: COLORS.red,
-    asyncCallback: 'helpCallsAndTexts',
-  },
-  {
-    key: 'magnifier',
-    name: 'Magnifier',
-    icon: 'saved-search',
-    color: COLORS.orange,
-    asyncCallback: 'turnTorchOnAndMagnify',
-  },
 ];
 
 const EXTRA_APPS: App[] = [
+  {
+    key: 'news',
+    name: 'News',
+    icon: 'radio',
+    color: COLORS.red,
+    package: 'org.npr.one',
+  },
+  {
+    key: 'settings',
+    name: 'Settings',
+    icon: 'settings',
+    color: COLORS.dark_blue,
+    screen: Screen.Configure,
+  },
+  {
+    key: 'book',
+    name: 'Books',
+    icon: 'menu-book',
+    color: COLORS.yellow,
+    package: 'com.google.android.apps.books',
+  },
   {
     key: 'whatsapp',
     name: 'WhatsApp',
@@ -288,12 +315,12 @@ const EXTRA_APPS: App[] = [
     screen: Screen.ContactList,
   },
   {
-    key: 'uber',
-    name: 'Taxi Home',
-    icon: 'local-taxi',
-    color: COLORS.red,
-    asyncCallback: 'uberHome',
-    depPackage: 'com.ubercab',
+    key: 'internet',
+    name: 'Internet',
+    icon: 'language',
+    color: COLORS.green,
+    asyncCallback: 'openHomepage',
+    depPackage: INTERNET,
   },
   {
     key: 'music',
@@ -314,7 +341,7 @@ const EXTRA_APPS: App[] = [
     key: 'email',
     name: 'Email',
     icon: 'email',
-    color: COLORS.green,
+    color: COLORS.red,
     package: 'com.google.android.gm',
   },
   {
@@ -344,27 +371,6 @@ const EXTRA_APPS: App[] = [
     icon: 'videogame-asset',
     color: COLORS.green,
     package: 'com.gsr.wordcross',
-  },
-  {
-    key: 'news',
-    name: 'News',
-    icon: 'radio',
-    color: COLORS.red,
-    package: 'org.npr.one',
-  },
-  {
-    key: 'settings',
-    name: 'Settings',
-    icon: 'settings',
-    color: COLORS.dark_blue,
-    screen: Screen.Configure,
-  },
-  {
-    key: 'book',
-    name: 'Books',
-    icon: 'menu-book',
-    color: COLORS.yellow,
-    package: 'com.google.android.apps.books',
   },
 ];
 
@@ -487,6 +493,17 @@ export async function pickAndCall() {
 export function callPhone(phoneNum: string) {
   const num = removeNonDigits(phoneNum);
   RNImmediatePhoneCall.immediatePhoneCall(num);
+}
+
+export async function openHomepage(): Promise<void> {
+  const data = await getAppData();
+  if (data === null || !data.homepageUrl) {
+    if (await checkInstalled(INTERNET)) {
+      await SendIntentAndroid.openApp(INTERNET, {});
+    }
+  } else {
+    await Linking.openURL(data.homepageUrl);
+  }
 }
 
 function alert(msg: string) {
@@ -919,19 +936,19 @@ async function getAppData(): Promise<AppData | null> {
   return appDataCache !== undefined ? appDataCache : null;
 }
 
-async function getContactIdByName(name: string): Promise<string> {
-  const cnts = (await getContacts()).filter(cnt => {
-    const cntName = [cnt.givenName, cnt.familyName]
-      .join(' ')
-      .toLowerCase()
-      .trim();
-    return cntName === name.toLowerCase();
-  });
-  if (cnts.length > 0) {
-    return cnts[0].recordID;
-  }
-  throw new Error(`${cnts.length} contacts with this name were found: ${name}`);
-}
+// async function getContactIdByName(name: string): Promise<string> {
+//   const cnts = (await getContacts()).filter(cnt => {
+//     const cntName = [cnt.givenName, cnt.familyName]
+//       .join(' ')
+//       .toLowerCase()
+//       .trim();
+//     return cntName === name.toLowerCase();
+//   });
+//   if (cnts.length > 0) {
+//     return cnts[0].recordID;
+//   }
+//   throw new Error(`${cnts.length} contacts with this name were found: ${name}`);
+// }
 
 function openApp(pkg: string) {
   return async () => {
@@ -1024,17 +1041,39 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
   const onSubmit = async (data: AppData) => {
     console.log(data);
     setErrTxt('');
-    data.emerContact1 = processInput(data.emerContact1);
+    // data.emerContact1 = processInput(data.emerContact1);
+    data.homepageUrl = processInput(data.homepageUrl);
     data.homeAddress = processInput(data.homeAddress);
     data.favMusicGenre = processInput(data.favMusicGenre);
 
+    // TODO: Use contact picker
+    // try {
+    //   data.emerContact1 = await getContactIdByName(data.emerContact1);
+    // } catch (err) {
+    //   console.warn(err);
+    //   setErrTxt('Invalid emergency contact, try again');
+    //   return;
+    // }
+
+    let url: URL | undefined;
     try {
-      data.emerContact1 = await getContactIdByName(data.emerContact1);
+      url = new URL(data.homepageUrl);
     } catch (err) {
-      console.warn(err);
-      setErrTxt('Invalid emergency contact, try again');
+      try {
+        url = new URL(`https://${data.homepageUrl}`);
+      } catch (err2) {
+        console.warn(err);
+        setErrTxt('Invalid homepage url, try again');
+        return;
+      }
+    }
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      const msg = 'Homepage url must start with http or https';
+      console.warn(`${msg}, url = ${data.homepageUrl}`);
+      setErrTxt(`${msg}, try again`);
       return;
     }
+    data.homepageUrl = url.href;
 
     try {
       const jsonVal = JSON.stringify(data);
@@ -1050,20 +1089,15 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
 
   const onSkip = async () => {
     setErrTxt('');
-    const data: AppData = {
-      emerContact1: '',
-      homeAddress: '',
-      favMusicGenre: '',
-    };
     try {
-      const jsonVal = JSON.stringify(data);
+      const jsonVal = JSON.stringify(APP_DATA_DEFAULTS);
       await AsyncStorage.setItem(APP_DATA_LABEL, jsonVal);
     } catch (err) {
       console.warn(err);
       setErrTxt('Skip failed, try again');
       return;
     }
-    appDataCache = {...data};
+    appDataCache = {...APP_DATA_DEFAULTS};
     navigation.goBack();
   };
 
@@ -1075,6 +1109,7 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
 
   const optionStyle = tailwind('p-1');
   const textStyle = tailwind('text-2xl font-bold text-black');
+  const subTextStyle = tailwind('text-xl font-semibold text-black');
   const inputStyle = tailwind(
     'text-2xl font-bold text-black bg-white border border-indigo-200',
   );
@@ -1112,8 +1147,12 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
         </View>
       )}
       <Header text={'Customize'} />
+      <Text style={subTextStyle}>Input to enable optional features:</Text>
       <View style={optionStyle}>
         <Text style={textStyle}>Home Address</Text>
+        <Text style={subTextStyle}>
+          The Maps and Taxi apps will auto-navigate to this address.
+        </Text>
         <Controller
           control={control}
           rules={{
@@ -1135,8 +1174,11 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
         />
         {errors.homeAddress && <Text style={errStyle}>This is required.</Text>}
       </View>
-      <View style={optionStyle}>
+      {/* <View style={optionStyle}>
         <Text style={textStyle}>Emergency Contact</Text>
+        <Text style={subTextStyle}>
+          The Help! button will call and text this person.
+        </Text>
         <Controller
           control={control}
           rules={{
@@ -1154,9 +1196,35 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
           name="emerContact1"
         />
         {errors.emerContact1 && <Text style={errStyle}>This is required.</Text>}
+      </View> */}
+      <View style={optionStyle}>
+        <Text style={textStyle}>Homepage Url</Text>
+        <Text style={subTextStyle}>
+          The Internet app will open to this url.
+        </Text>
+        <Controller
+          control={control}
+          rules={{
+            required: true,
+          }}
+          render={({field: {onChange, onBlur, value}}) => (
+            <TextInput
+              style={inputStyle}
+              onBlur={onBlur}
+              onChangeText={onChange}
+              placeholder="https://example.com"
+              value={value}
+            />
+          )}
+          name="homepageUrl"
+        />
+        {errors.homepageUrl && <Text style={errStyle}>This is required.</Text>}
       </View>
       <View style={optionStyle}>
         <Text style={textStyle}>Favorite Music Genre</Text>
+        <Text style={subTextStyle}>
+          The Music app will search for this genre.
+        </Text>
         <Controller
           control={control}
           rules={{
@@ -1187,68 +1255,77 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
   );
 };
 
-// async function wait(sec: number) {
+// async function sleep(sec: number) {
 //   return new Promise(res => setTimeout(res, sec * 1000));
 // }
 
-async function getEmergencyContacts(): Promise<Contacts.Contact[]> {
-  const data = await getAppData();
-  if (data === null || !data.emerContact1) {
-    return [];
-  }
-  const ids: string[] = [data.emerContact1];
-  return (await getContacts()).filter(cnt => ids.includes(cnt.recordID));
-}
+// async function getEmergencyContacts(): Promise<Contacts.Contact[]> {
+//   const data = await getAppData();
+//   if (data === null || !data.emerContact1) {
+//     return [];
+//   }
+//   const ids: string[] = [data.emerContact1];
+//   return (await getContacts()).filter(cnt => ids.includes(cnt.recordID));
+// }
 
-export async function helpCallsAndTexts() {
-  const emerContacts = await getEmergencyContacts();
-  if (emerContacts.length === 0) {
-    console.warn('No emergency contacts have been added.');
-    Alert.alert(
-      'No emergency contacts have been added. Call 911 if necessary!',
-    );
-    return;
-  }
+// export async function helpCallsAndTexts() {
+//   const emerContacts = await getEmergencyContacts();
+//   if (emerContacts.length === 0) {
+//     console.warn('No emergency contacts have been added.');
+//     Alert.alert(
+//       'No emergency contacts have been added. Call 911 if necessary!',
+//     );
+//     return;
+//   }
 
-  for (const contact of emerContacts) {
-    SmsAndroid.sms(
-      removeNonDigits(contact.phoneNumbers[0].number),
-      'I have pressed the help button on my phone! Please call ASAP!',
-      'sendDirect',
-      (err: Error, msg: string) => {
-        if (err) {
-          console.warn(err);
-          alert('Failed to send help text msg');
-        } else {
-          console.log(msg);
-        }
-      },
-    );
+//   for (const contact of emerContacts) {
+//     const phoneNum = removeNonDigits(contact.phoneNumbers[0].number);
+//     console.log(`Texting ${phoneNum}`);
+//     SendSMS.send(
+//       {
+//         body: 'I have pressed the help button on my phone! Please call ASAP!',
+//         recipients: [phoneNum],
+//         // @ts-ignore
+//         successTypes: ['all'],
+//         allowAndroidSendWithoutReadPermission: true,
+//       },
+//       (completed, cancelled, error) => {
+//         console.log(
+//           `SMS: completed: ${completed}, cancelled: ${cancelled}, error: ${error}`,
+//         );
+//         // TODO: callback only fires after you have navigated back
+//         SendIntentAndroid.openApp('com.greyphone', {})
+//           .then(_ => {
+//             console.log(`Calling ${phoneNum}`);
+//             callPhone(phoneNum);
+//           })
+//           .catch(console.warn);
+//       },
+//     );
 
-    // const callDetector = new CallDetectorManager(
-    //   (event: string, phoneNumber: string) => {
-    //     console.log(`Call state: ${event}, phone: ${phoneNumber}`);
-    //     // Ignore iOS call states
-    //     if (event === 'Disconnected') {
-    //       // qqq
-    //     } else if (event === 'Incoming') {
-    //       // qqq
-    //     } else if (event === 'Offhook') {
-    //       // At least one call exists that is dialing, active, or on hold,
-    //       // and no calls are ringing or waiting.
-    //       // qqq
-    //     } else if (event === 'Missed') {
-    //       // qqq
-    //     }
-    //   },
-    //   true,
-    // );
+//     const callDetector = new CallDetectorManager(
+//       (event: string, phoneNumber: string) => {
+//         console.log(`Call state: ${event}, phone: ${phoneNumber}`);
+//         // Ignore iOS call states
+//         if (event === 'Disconnected') {
+//           // qqq
+//         } else if (event === 'Incoming') {
+//           // qqq
+//         } else if (event === 'Offhook') {
+//           // At least one call exists that is dialing, active, or on hold,
+//           // and no calls are ringing or waiting.
+//           // qqq
+//         } else if (event === 'Missed') {
+//           // qqq
+//         }
+//       },
+//       false,
+//     );
 
-    callPhone(contact.phoneNumbers[0].number);
-    // await wait(60);
-    // callDetector.dispose();
-  }
-}
+//     await sleep(60);
+//     callDetector.dispose();
+//   }
+// }
 
 async function checkInstalled(pkg: string): Promise<boolean> {
   if (await SendIntentAndroid.isAppInstalled(pkg)) {
@@ -1268,10 +1345,10 @@ function getExport(varName: string): any {
 
 async function getAppDataOrDefault(): Promise<AppData> {
   const data = (await getAppData()) ?? APP_DATA_DEFAULTS;
-  const emer = (await getContacts()).find(
-    cnt => cnt.recordID === data.emerContact1,
-  );
-  data.emerContact1 = emer ? `${emer.givenName} ${emer.familyName}` : '';
+  // const emer = (await getContacts()).find(
+  //   cnt => cnt.recordID === data.emerContact1,
+  // );
+  // data.emerContact1 = emer ? `${emer.givenName} ${emer.familyName}` : '';
   return data;
 }
 

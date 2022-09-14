@@ -1,6 +1,6 @@
 {
   "name": "basicphone",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -23,7 +23,6 @@
     "react-hook-form": "^7.30.0",
     "react-native": "0.70.0",
     "react-native-action-sheet": "^2.2.0",
-    "react-native-call-detection": "github:priteshrnandgaonkar/react-native-call-detection#a74ddb3cd4adeddf44bae58b09233bd219702aeb",
     "react-native-call-log": "github:babraham123/react-native-call-log#a032fb3c3ed03a8f8786b50c3d022902aca4a0c5",
     "react-native-contacts": "github:morenoh149/react-native-contacts#76e72ebb7c31cb0c516a34e238c926ab14d6cb33",
     "react-native-device-info": "^9.0.2",
@@ -35,9 +34,9 @@
     "react-native-screens": "^3.13.1",
     "react-native-select-contact": "^1.6.3",
     "react-native-send-intent": "^1.3.0",
-    "react-native-sms-android": "^0.4.1",
     "react-native-tab-view": "^3.1.1",
     "react-native-torch": "github:oguennec/react-native-torch#baf88842ae02345f0cca9e45bcd85aef8b6dbfc8",
+    "react-native-url-polyfill": "^1.3.0",
     "react-native-vector-icons": "^9.1.0",
     "tailwind-rn": "^4.2.0"
   },
