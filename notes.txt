@@ -39,6 +39,7 @@ https://github.com/react-native-device-info/react-native-device-info
 https://romannurik.github.io/AndroidAssetStudio/icons-launcher.html
 https://react-native-community.github.io/upgrade-helper/
 https://app-privacy-policy-generator.firebaseapp.com/
+https://www.androidauthority.com/make-a-custom-android-launcher-837342-837342/
 
 
 Deep links::
