@@ -36,6 +36,7 @@ import {useForm, Controller} from 'react-hook-form';
 // import CallDetectorManager from 'react-native-call-detection';
 // import SendSMS from 'react-native-sms';
 import {selectContactPhone} from 'react-native-select-contact';
+// @ts-ignore
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scrollview';
 import DeviceInfo from 'react-native-device-info';
 import 'react-native-url-polyfill/auto';
@@ -1599,12 +1600,14 @@ function HomeTabScreen() {
       }}>
       <HomeTab.Screen
         name={Screen.Home}
+        // @ts-ignore
         component={AppPanel}
         initialParams={{apps: APPS}}
         options={{tabBarLabel: 'Home'}}
       />
       <HomeTab.Screen
         name={Screen.Extras}
+        // @ts-ignore
         component={AppPanel}
         initialParams={{apps: EXTRA_APPS}}
         options={{tabBarLabel: 'Extra'}}
