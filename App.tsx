@@ -18,6 +18,7 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import AwesomeAlert from 'react-native-awesome-alerts';
 import {TailwindProvider, useTailwind} from 'tailwind-rn';
 import utilities from './tailwind.json';
 import {NavigationContainer} from '@react-navigation/native';
@@ -55,6 +56,7 @@ const LAUNCHER = 'shubh.ruthless'; // 'com.google.android.apps.nexuslauncher'
 const SETTINGS = 'com.android.settings';
 const MAGNIFIER = 'com.app2u.magnifier';
 const INTERNET = 'com.android.chrome';
+const CONTACTS_APP = 'com.android.contacts';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat'];
 const MONTHS = [
@@ -118,6 +120,10 @@ type NavProp =
   | HomeTabProps['navigation'];
 
 let contactsCache: Contacts.Contact[] | undefined;
+
+let showModal = (msg: string, link: string): void => {
+  console.warn(`Alert failed: ${msg}\n${link}`);
+};
 
 interface PhoneInfo {
   manufacturer: string;
@@ -404,6 +410,13 @@ const BACKGROUND_APPS: App[] = [
     color: COLORS.black,
     package: MAGNIFIER,
   },
+  {
+    key: 'contacts',
+    name: 'Contacts',
+    icon: 'search',
+    color: COLORS.black,
+    package: CONTACTS_APP,
+  },
 ];
 
 function removeNonDigits(num: string): string {
@@ -452,9 +465,7 @@ export async function turnTorchOnAndMagnify() {
   if (cameraAllowed) {
     await Torch.switchState(true);
   }
-  if (await checkInstalled(MAGNIFIER)) {
-    await SendIntentAndroid.openApp(MAGNIFIER, {});
-  }
+  await openAppAsync('Magnifier', MAGNIFIER);
 }
 
 async function turnTorchOff() {
@@ -469,9 +480,7 @@ async function turnTorchOff() {
 export async function openVoicemail() {
   const vmPkg = await pickVisualVoicemailApp();
   if (vmPkg) {
-    if (await checkInstalled(vmPkg)) {
-      await SendIntentAndroid.openApp(vmPkg, {});
-    }
+    await openAppAsync('Voicemail', vmPkg);
   } else {
     const vmNum = await SendIntentAndroid.getVoiceMailNumber();
     callPhone(vmNum);
@@ -499,9 +508,7 @@ export function callPhone(phoneNum: string) {
 export async function openHomepage(): Promise<void> {
   const data = await getAppData();
   if (data === null || !data.homepageUrl) {
-    if (await checkInstalled(INTERNET)) {
-      await SendIntentAndroid.openApp(INTERNET, {});
-    }
+    await openAppAsync('Internet', INTERNET);
   } else {
     await Linking.openURL(data.homepageUrl);
   }
@@ -764,6 +771,24 @@ async function pickVisualVoicemailApp(): Promise<string | undefined> {
   return undefined;
 }
 
+async function pickLauncherApp(): Promise<string> {
+  const phoneInfo = await getPhoneInfo();
+
+  // https://developers.google.com/zero-touch/resources/manufacturer-names
+  if (phoneInfo.manufacturer === 'google') {
+    return 'com.google.android.apps.nexuslauncher';
+  } else {
+    return LAUNCHER;
+  }
+}
+
+function openLauncher() {
+  return async () => {
+    const pkg = await pickLauncherApp();
+    await openAppAsync('Original Launcher', pkg);
+  };
+}
+
 async function getContacts(): Promise<Contacts.Contact[]> {
   if (contactsCache !== undefined) {
     return contactsCache;
@@ -854,21 +879,24 @@ const Contact = (props: {
 
 const ContactPanel = ({navigation, route}: ContactsProps) => {
   const tailwind = useTailwind();
+  const [showAlert, setShowAlert] = useState(false);
 
   const [contacts, setContacts] = useState<Contacts.Contact[]>([]);
   useEffect(() => {
     getContacts()
       .then(cnts => {
-        setContacts(
-          cnts.filter(
-            cnt =>
-              (ALL_CONTACTS || cnt.isStarred) &&
-              cnt.phoneNumbers.length > 0 &&
-              cnt.phoneNumbers[0].number &&
-              cnt.givenName.length > 0 &&
-              !['#', '*'].includes(cnt.givenName.charAt(0)),
-          ),
+        const starredCnts = cnts.filter(
+          cnt =>
+            (ALL_CONTACTS || cnt.isStarred) &&
+            cnt.phoneNumbers.length > 0 &&
+            cnt.phoneNumbers[0].number &&
+            cnt.givenName.length > 0 &&
+            !['#', '*'].includes(cnt.givenName.charAt(0)),
         );
+        setContacts(starredCnts);
+        if (starredCnts.length === 0) {
+          setShowAlert(true);
+        }
       })
       .catch(console.warn);
     // Only run on first render
@@ -913,6 +941,50 @@ const ContactPanel = ({navigation, route}: ContactsProps) => {
           <View style={tailwind('h-5')} />
         </View>
       ) : null}
+      <AwesomeAlert
+        show={showAlert}
+        showProgress={false}
+        title="Alert"
+        // eslint-disable-next-line react-native/no-inline-styles
+        titleStyle={{
+          fontSize: 28,
+          fontWeight: 'bold',
+          color: COLORS.black,
+        }}
+        message={
+          'No favorite contacts were found. Consider starring some of your existing contacts.'
+        }
+        // eslint-disable-next-line react-native/no-inline-styles
+        messageStyle={{
+          fontSize: 26,
+          fontWeight: '500',
+          color: COLORS.black,
+        }}
+        closeOnTouchOutside={true}
+        closeOnHardwareBackPress={true}
+        showCancelButton={true}
+        showConfirmButton={true}
+        cancelText="Ignore"
+        confirmText="Open Contacts"
+        confirmButtonColor={COLORS.green}
+        onCancelPressed={() => {
+          setShowAlert(false);
+        }}
+        // eslint-disable-next-line react-native/no-inline-styles
+        cancelButtonTextStyle={{
+          fontSize: 28,
+          fontWeight: 'bold',
+        }}
+        onConfirmPressed={async () => {
+          setShowAlert(false);
+          await openAppAsync('Contacts', CONTACTS_APP);
+        }}
+        // eslint-disable-next-line react-native/no-inline-styles
+        confirmButtonTextStyle={{
+          fontSize: 28,
+          fontWeight: 'bold',
+        }}
+      />
     </View>
   );
 };
@@ -951,16 +1023,21 @@ async function getAppData(): Promise<AppData | null> {
 //   throw new Error(`${cnts.length} contacts with this name were found: ${name}`);
 // }
 
-function openApp(pkg: string) {
+function openApp(name: string, pkg: string) {
   return async () => {
-    if (await checkInstalled(pkg)) {
-      await SendIntentAndroid.openApp(pkg, {});
-    }
+    await openAppAsync(name, pkg);
   };
+}
+
+async function openAppAsync(name: string, pkg: string) {
+  if (await checkInstalled(name, pkg)) {
+    await SendIntentAndroid.openApp(pkg, {});
+  }
 }
 
 const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
   const tailwind = useTailwind();
+  const [showAlert, setShowAlert] = useState(false);
 
   const [apps, setApps] = useState<App[]>([]);
   useEffect(() => {
@@ -1020,6 +1097,17 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
         )
           .then(results => setApps(allApps.filter((app, i) => results[i])))
           .catch(console.warn);
+      })
+      .catch(console.warn);
+    // Only run on first render
+  }, []);
+
+  useEffect(() => {
+    getAppData()
+      .then(res => {
+        if (res === null) {
+          setShowAlert(true);
+        }
       })
       .catch(console.warn);
     // Only run on first render
@@ -1124,13 +1212,13 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
       <View style={optionStyle}>
         <Button
           title="Phone Settings"
-          onPress={openApp(SETTINGS)}
+          onPress={openApp('Settings', SETTINGS)}
           color={COLORS.blue}
         />
       </View>
       {apps.length > 0 && (
         <View>
-          <Header text={'Install & configure'} />
+          <Header text={'Install'} />
           <View style={tailwind('flex flex-row flex-wrap m-2')}>
             {apps.map(app => {
               return (
@@ -1252,6 +1340,41 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
       <View style={tailwind('h-5')} />
       <Button title="Skip for now" onPress={onSkip} color={COLORS.yellow} />
       <View style={tailwind('h-5')} />
+      <AwesomeAlert
+        show={showAlert}
+        showProgress={false}
+        title="Welcome to Basic Phone!"
+        // eslint-disable-next-line react-native/no-inline-styles
+        titleStyle={{
+          fontSize: 28,
+          fontWeight: 'bold',
+          color: COLORS.black,
+        }}
+        message={`Here are some optional steps you can take to set up the app.
+
+First, install and configure our recommended apps.
+Second, input some basic details (they are never uploaded).`}
+        // eslint-disable-next-line react-native/no-inline-styles
+        messageStyle={{
+          fontSize: 26,
+          fontWeight: '500',
+          color: COLORS.black,
+        }}
+        closeOnTouchOutside={true}
+        closeOnHardwareBackPress={true}
+        showCancelButton={false}
+        showConfirmButton={true}
+        confirmText="Continue"
+        confirmButtonColor={COLORS.green}
+        onConfirmPressed={async () => {
+          setShowAlert(false);
+        }}
+        // eslint-disable-next-line react-native/no-inline-styles
+        confirmButtonTextStyle={{
+          fontSize: 28,
+          fontWeight: 'bold',
+        }}
+      />
     </KeyboardAwareScrollView>
   );
 };
@@ -1328,12 +1451,11 @@ const ConfigurePanel = ({navigation, route}: ConfigureProps) => {
 //   }
 // }
 
-async function checkInstalled(pkg: string): Promise<boolean> {
+async function checkInstalled(name: string, pkg: string): Promise<boolean> {
   if (await SendIntentAndroid.isAppInstalled(pkg)) {
     return true;
   }
-  console.warn(`Pkg not installed: ${pkg}`);
-  await Linking.openURL(PLAY_STORE_URL + pkg);
+  showModal(`The '${name}' app is not install!`, PLAY_STORE_URL + pkg);
   return false;
 }
 
@@ -1359,7 +1481,7 @@ async function handleApp(app: App, navigation: NavProp) {
     app.depPackage = app.package;
   }
   try {
-    if (app.depPackage && !(await checkInstalled(app.depPackage))) {
+    if (app.depPackage && !(await checkInstalled(app.name, app.depPackage))) {
       return;
     }
   } catch (err) {
@@ -1579,7 +1701,7 @@ const AppPanel = ({navigation, route}: HomeProps | ExtrasProps) => {
         <Button
           title="Original Home Screen"
           color={COLORS.grey}
-          onPress={openApp(LAUNCHER)}
+          onPress={openLauncher()}
         />
       </View>
     </View>
@@ -1617,6 +1739,15 @@ function HomeTabScreen() {
 }
 
 const App = () => {
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertText, setAlertText] = useState('');
+  const [alertLink, setAlertLink] = useState('');
+  showModal = (msg: string, link: string): void => {
+    setAlertText(msg);
+    setAlertLink(link);
+    setShowAlert(true);
+  };
+
   useEffect(() => {
     // Turn off flashlight if it's on
     turnTorchOff().catch(console.log);
@@ -1649,6 +1780,50 @@ const App = () => {
           />
         </RootStack.Navigator>
       </NavigationContainer>
+      <AwesomeAlert
+        show={showAlert}
+        showProgress={false}
+        title="Alert"
+        // eslint-disable-next-line react-native/no-inline-styles
+        titleStyle={{
+          fontSize: 28,
+          fontWeight: 'bold',
+          color: COLORS.black,
+        }}
+        message={alertText}
+        // eslint-disable-next-line react-native/no-inline-styles
+        messageStyle={{
+          fontSize: 26,
+          fontWeight: '500',
+          color: COLORS.black,
+        }}
+        closeOnTouchOutside={true}
+        closeOnHardwareBackPress={true}
+        showCancelButton={true}
+        showConfirmButton={true}
+        cancelText="Ignore"
+        confirmText="Install"
+        confirmButtonColor={COLORS.green}
+        onCancelPressed={() => {
+          setShowAlert(false);
+        }}
+        // eslint-disable-next-line react-native/no-inline-styles
+        cancelButtonTextStyle={{
+          fontSize: 28,
+          fontWeight: 'bold',
+        }}
+        onConfirmPressed={async () => {
+          setShowAlert(false);
+          if (alertLink) {
+            await Linking.openURL(alertLink);
+          }
+        }}
+        // eslint-disable-next-line react-native/no-inline-styles
+        confirmButtonTextStyle={{
+          fontSize: 28,
+          fontWeight: 'bold',
+        }}
+      />
     </TailwindProvider>
   );
 };

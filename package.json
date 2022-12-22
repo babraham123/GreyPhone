@@ -23,6 +23,7 @@
     "react-hook-form": "^7.30.0",
     "react-native": "0.70.0",
     "react-native-action-sheet": "^2.2.0",
+    "react-native-awesome-alerts": "^2.0.0",
     "react-native-call-log": "github:babraham123/react-native-call-log#a032fb3c3ed03a8f8786b50c3d022902aca4a0c5",
     "react-native-contacts": "github:morenoh149/react-native-contacts#76e72ebb7c31cb0c516a34e238c926ab14d6cb33",
     "react-native-device-info": "^9.0.2",
