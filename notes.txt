@@ -11,7 +11,7 @@ adb kill-server
 rm -rf android/app/src/main/assets/fonts
 adb uninstall "com.greyphone"
 
-react-native run-android --variant=release
+npx react-native run-android --variant=release
 cd android
 ./gradlew bundleRelease
 ls android/app/build/outputs/bundle/release/app-release.aab
@@ -31,6 +31,12 @@ vi npm_modules/patch-package/dist/makePatch.js:50
 https://github.com/ds300/patch-package/issues/139
 
 Update the versionCode in android/app/build.gradle
+
+
+Future::
+Migrate from tailwind-rn to twrnc (https://www.npmjs.com/package/twrnc)
+Break out components into separate files
+Reduce reliance on global variables / functions
 
 
 References::

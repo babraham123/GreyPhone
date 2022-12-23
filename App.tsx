@@ -514,15 +514,15 @@ export async function openHomepage(): Promise<void> {
   }
 }
 
-function alert(msg: string) {
+function alertAndWarn(msg: string, err?: any) {
+  if (err) {
+    console.warn(err);
+  } else {
+    console.warn(msg);
+  }
   if (DEBUG) {
     Alert.alert(msg);
   }
-}
-
-function alertAndWarn(msg: string) {
-  console.warn(msg);
-  alert(msg);
 }
 
 const Header = (props: {text: string}) => {
@@ -581,8 +581,7 @@ async function getMissedCalls(): Promise<CallLog[]> {
       types: 'MISSED',
     });
   } catch (err) {
-    console.warn(err);
-    alert('Unable to retrieve call logs');
+    alertAndWarn('Unable to retrieve call logs', err);
   }
   if (calls.length === 0) {
     return [];
@@ -824,8 +823,7 @@ async function getContacts(): Promise<Contacts.Contact[]> {
     });
     console.log(`${contactsCache.length} contacts retrieved.`);
   } catch (err) {
-    console.warn(err);
-    alert('Unable to retrieve contacts');
+    alertAndWarn('Unable to retrieve contacts', err);
     contactsCache = [];
   }
   return contactsCache;
@@ -1000,8 +998,7 @@ async function getAppData(): Promise<AppData | null> {
     }
     appDataCache = JSON.parse(jsonVal);
   } catch (err) {
-    console.warn(err);
-    alert('Unable to retrieve app configurations');
+    alertAndWarn('Unable to retrieve app configurations', err);
     return null;
   }
 
@@ -1485,8 +1482,7 @@ async function handleApp(app: App, navigation: NavProp) {
       return;
     }
   } catch (err) {
-    console.warn(err);
-    alert(`Unable to install package: ${app.depPackage}`);
+    alertAndWarn(`Unable to install package: ${app.depPackage}`, err);
   }
   if (!app.cbParams) {
     app.cbParams = [];
@@ -1516,33 +1512,28 @@ async function handleApp(app: App, navigation: NavProp) {
         alertAndWarn(`Unknown URL: ${app.url}`);
       }
     } catch (err) {
-      console.warn(err);
-      alert(`Bad URL: ${app.url}`);
+      alertAndWarn(`Bad URL: ${app.url}`, err);
     }
   } else if (app.package) {
     try {
       await SendIntentAndroid.openApp(app.package, {});
     } catch (err) {
-      console.warn(err);
-      alert(`Bad pkg: ${app.package}`);
+      alertAndWarn(`Bad pkg: ${app.package}`, err);
     }
   } else if (app.callback) {
     try {
       getExport(app.callback)(...app.cbParams);
     } catch (err) {
-      console.warn(err);
-      alert(`Bad app callback: ${app.name}`);
+      alertAndWarn(`Bad app callback: ${app.name}`, err);
     }
   } else if (app.asyncCallback) {
     try {
       await getExport(app.asyncCallback)(...app.cbParams);
     } catch (err) {
-      console.warn(err);
-      alert(`Bad app callback: ${app.name}`);
+      alertAndWarn(`Bad app callback: ${app.name}`, err);
     }
   } else {
-    console.warn(JSON.stringify(app));
-    alert(`Invalid app: ${app.name}`);
+    alertAndWarn(`Invalid app: ${JSON.stringify(app)}`);
   }
 }
 
@@ -1597,6 +1588,9 @@ const Battery = () => {
   const tailwind = useTailwind();
   const [level, setLevel] = useState(1.0);
   const [props, setProps] = useState(BATTERY_PROPS.full);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertText, setAlertText] = useState('');
+
   useEffect(() => {
     const updateBatteryStatus = () => {
       DeviceInfo.getPowerState()
@@ -1613,7 +1607,8 @@ const Battery = () => {
             power.batteryLevel < LOW_BATTERY
           ) {
             const lvl = Math.round(power.batteryLevel * 100);
-            Alert.alert(`Warning, battery is low (${lvl}%). Please charge!`);
+            setAlertText(`Warning, battery is at ${lvl}%. Please charge!`);
+            setShowAlert(true);
           }
 
           setLevel(power.batteryLevel);
@@ -1648,6 +1643,38 @@ const Battery = () => {
       <Text style={tailwind('text-2xl font-bold text-black')}>
         {`${Math.round(level * 100)}%`}
       </Text>
+      <AwesomeAlert
+        show={showAlert}
+        showProgress={false}
+        title="Battery is low!"
+        // eslint-disable-next-line react-native/no-inline-styles
+        titleStyle={{
+          fontSize: 28,
+          fontWeight: 'bold',
+          color: COLORS.black,
+        }}
+        message={alertText}
+        // eslint-disable-next-line react-native/no-inline-styles
+        messageStyle={{
+          fontSize: 26,
+          fontWeight: '500',
+          color: COLORS.black,
+        }}
+        closeOnTouchOutside={true}
+        closeOnHardwareBackPress={true}
+        showCancelButton={false}
+        showConfirmButton={true}
+        confirmText="OK"
+        confirmButtonColor={COLORS.green}
+        onConfirmPressed={async () => {
+          setShowAlert(false);
+        }}
+        // eslint-disable-next-line react-native/no-inline-styles
+        confirmButtonTextStyle={{
+          fontSize: 28,
+          fontWeight: 'bold',
+        }}
+      />
     </View>
   );
 };
