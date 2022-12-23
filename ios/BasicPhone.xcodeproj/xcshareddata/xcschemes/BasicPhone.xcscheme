@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "GreyPhone.app"
-               BlueprintName = "GreyPhone"
-               ReferencedContainer = "container:GreyPhone.xcodeproj">
+               BuildableName = "BasicPhone.app"
+               BlueprintName = "BasicPhone"
+               ReferencedContainer = "container:BasicPhone.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "GreyPhoneTests.xctest"
-               BlueprintName = "GreyPhoneTests"
-               ReferencedContainer = "container:GreyPhone.xcodeproj">
+               BuildableName = "BasicPhoneTests.xctest"
+               BlueprintName = "BasicPhoneTests"
+               ReferencedContainer = "container:BasicPhone.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "GreyPhone.app"
-            BlueprintName = "GreyPhone"
-            ReferencedContainer = "container:GreyPhone.xcodeproj">
+            BuildableName = "BasicPhone.app"
+            BlueprintName = "BasicPhone"
+            ReferencedContainer = "container:BasicPhone.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "GreyPhone.app"
-            BlueprintName = "GreyPhone"
-            ReferencedContainer = "container:GreyPhone.xcodeproj">
+            BuildableName = "BasicPhone.app"
+            BlueprintName = "BasicPhone"
+            ReferencedContainer = "container:BasicPhone.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

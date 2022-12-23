@@ -1415,7 +1415,7 @@ Second, input some basic details (they are never uploaded).`}
 //           `SMS: completed: ${completed}, cancelled: ${cancelled}, error: ${error}`,
 //         );
 //         // TODO: callback only fires after you have navigated back
-//         SendIntentAndroid.openApp('com.greyphone', {})
+//         SendIntentAndroid.openApp('com.basicphone', {})
 //           .then(_ => {
 //             console.log(`Calling ${phoneNum}`);
 //             callPhone(phoneNum);

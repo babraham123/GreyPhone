@@ -9,7 +9,7 @@ adb -s R58R40KPAYM reverse tcp:8081 tcp:8081
 adb kill-server
 
 rm -rf android/app/src/main/assets/fonts
-adb uninstall "com.greyphone"
+adb uninstall "com.basicphone"
 
 npx react-native run-android --variant=release
 cd android
